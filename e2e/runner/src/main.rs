@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -6,6 +7,8 @@ struct Case {
     name: &'static str,
     render_arg: &'static str,
     source_arg: bool,
+    lean_source: Option<&'static str>,
+    golden: Option<&'static str>,
 }
 
 struct InvalidCase {
@@ -33,6 +36,10 @@ fn run_case(repo: &Path, case: &Case) -> Result<(), String> {
     let output = "generated/flake.nix";
     let source = format!("path:{}", repo.display());
 
+    if let Some(source) = case.lean_source {
+        run(repo, "lake", &["env", "lean", source])?;
+    }
+
     if case.source_arg {
         run(
             repo,
@@ -56,6 +63,15 @@ fn run_case(repo: &Path, case: &Case) -> Result<(), String> {
     }
 
     run(repo, "nix", &["flake", "check", "path:./generated"])?;
+    if let Some(golden) = case.golden {
+        let generated = fs::read_to_string(repo.join(output))
+            .map_err(|err| format!("failed reading generated output: {err}"))?;
+        let expected = fs::read_to_string(repo.join(golden))
+            .map_err(|err| format!("failed reading golden output {golden}: {err}"))?;
+        if generated != expected {
+            return Err(format!("generated output differs from {golden}"));
+        }
+    }
 
     Ok(())
 }
@@ -92,26 +108,36 @@ fn main() -> Result<(), String> {
             name: "typed hello flake",
             render_arg: "render-example",
             source_arg: false,
+            lean_source: None,
+            golden: None,
         },
         Case {
             name: "self flake",
             render_arg: "render-self",
             source_arg: true,
+            lean_source: None,
+            golden: None,
         },
         Case {
             name: "typed closure flake",
             render_arg: "render-closure",
             source_arg: false,
+            lean_source: None,
+            golden: None,
         },
         Case {
             name: "typed CLI schema flake",
             render_arg: "render-cli-schema",
             source_arg: false,
+            lean_source: None,
+            golden: None,
         },
         Case {
             name: "proof-carrying CLI closure showcase",
             render_arg: "render-showcase",
             source_arg: false,
+            lean_source: Some("examples/proof-carrying-cli-closure/source.lean"),
+            golden: Some("examples/proof-carrying-cli-closure/expected.flake.nix"),
         },
     ];
     let invalid_cases = [

@@ -22,6 +22,12 @@ nix develop -c lake exe leanix render-showcase --out generated/flake.nix
 nix flake check path:./generated
 ```
 
+To check the standalone Lean excerpt:
+
+```sh
+nix develop -c lake env lean examples/proof-carrying-cli-closure/source.lean
+```
+
 Or run the full e2e harness:
 
 ```sh
@@ -30,10 +36,22 @@ nix develop -c cargo run --locked --manifest-path e2e/runner/Cargo.toml
 
 ## Source
 
-The typed source is `showcaseCliProject` in:
+The local excerpt is:
+
+```text
+examples/proof-carrying-cli-closure/source.lean
+```
+
+The canonical project source is `showcaseCliProject` in:
 
 ```text
 Leanix/Examples.lean
+```
+
+The expected rendered Nix is:
+
+```text
+examples/proof-carrying-cli-closure/expected.flake.nix
 ```
 
 The generated flake is an artifact. The source of truth is the Lean value.
