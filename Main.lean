@@ -1,7 +1,7 @@
 import Leanix
 
 def usage : String :=
-  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix"
+  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix"
 
 def renderToFile (flake : Leanix.Flake) (outputPath : String) : IO UInt32 := do
   match Leanix.renderFlake flake with
@@ -32,6 +32,8 @@ def main (args : List String) : IO UInt32 := do
       renderToFile Leanix.Examples.closureFlake outputPath
   | ["render-cli-schema", "--out", outputPath] =>
       renderExceptToFile Leanix.Examples.helloCliSchemaFlake outputPath
+  | ["render-showcase", "--out", outputPath] =>
+      renderExceptToFile Leanix.Examples.showcaseFlake outputPath
   | ["render-invalid-cli-schema", "--out", outputPath] =>
       renderExceptToFile Leanix.Examples.brokenCliSchemaFlake outputPath
   | ["render-invalid-missing-ref", "--out", outputPath] =>

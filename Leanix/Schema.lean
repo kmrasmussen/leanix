@@ -23,6 +23,7 @@ def ValidatedSchema.outputs [FlakeSchema schema] (validated : ValidatedSchema sc
 
 structure CliProject (system : System) where
   package : Package system
+  extraPackages : List (Package system) := []
   app : App system
   devShell : DevShell system
   check : Check system
@@ -70,7 +71,7 @@ def CliProject.validate (project : CliProject system) : Except String Unit := do
 def CliProject.toOutputs : {system : System} -> CliProject system -> Outputs
   | .x86_64_linux, project => {
       packages
-        | .x86_64_linux => [project.package]
+        | .x86_64_linux => [project.package] ++ project.extraPackages
         | _ => []
       apps
         | .x86_64_linux => [project.app]
@@ -84,7 +85,7 @@ def CliProject.toOutputs : {system : System} -> CliProject system -> Outputs
     }
   | .aarch64_linux, project => {
       packages
-        | .aarch64_linux => [project.package]
+        | .aarch64_linux => [project.package] ++ project.extraPackages
         | _ => []
       apps
         | .aarch64_linux => [project.app]
@@ -98,7 +99,7 @@ def CliProject.toOutputs : {system : System} -> CliProject system -> Outputs
     }
   | .x86_64_darwin, project => {
       packages
-        | .x86_64_darwin => [project.package]
+        | .x86_64_darwin => [project.package] ++ project.extraPackages
         | _ => []
       apps
         | .x86_64_darwin => [project.app]
@@ -112,7 +113,7 @@ def CliProject.toOutputs : {system : System} -> CliProject system -> Outputs
     }
   | .aarch64_darwin, project => {
       packages
-        | .aarch64_darwin => [project.package]
+        | .aarch64_darwin => [project.package] ++ project.extraPackages
         | _ => []
       apps
         | .aarch64_darwin => [project.app]

@@ -186,5 +186,30 @@ def brokenCliProject : CliProject .x86_64_linux where
 def brokenCliSchemaFlake : Except String Flake :=
   Flake.fromSchema "Leanix invalid CLI schema example" [("nixpkgs", nixpkgsInput)] brokenCliProject
 
+def showcaseCliProject : CliProject .x86_64_linux where
+  package := helloWrapperPackage
+  extraPackages := [helloToolPackage]
+  app := {
+    name := "default"
+    packageName := "helloWrapper"
+    program := "bin/hello-wrapper"
+  }
+  devShell := {
+    name := "default"
+    packageNames := ["helloWrapper"]
+  }
+  check := {
+    name := "default"
+    packageName := "helloWrapper"
+    command := "hello-wrapper > \"$out\""
+  }
+
+def showcaseValidatedSchema : Except String (ValidatedSchema (CliProject .x86_64_linux)) :=
+  CliProject.validateChecked showcaseCliProject
+
+def showcaseFlake : Except String Flake :=
+  showcaseValidatedSchema.map fun validated =>
+    Flake.fromValidatedSchema "Leanix proof-carrying CLI closure showcase" [("nixpkgs", nixpkgsInput)] validated
+
 end Examples
 end Leanix

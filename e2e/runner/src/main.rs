@@ -108,6 +108,11 @@ fn main() -> Result<(), String> {
             render_arg: "render-cli-schema",
             source_arg: false,
         },
+        Case {
+            name: "proof-carrying CLI closure showcase",
+            render_arg: "render-showcase",
+            source_arg: false,
+        },
     ];
     let invalid_cases = [
         InvalidCase {
