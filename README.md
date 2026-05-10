@@ -11,6 +11,10 @@ reproducible build graphs, and Nix interop becomes a backend.
 Lean owns the typed model, validation, and rendering. Rust owns e2e harnesses,
 subprocess orchestration, filesystem work, and generated-flake smoke tests.
 
+Leanix now validates first-order package closure: package build expressions can
+refer to other packages, and Lean rejects missing package references and package
+dependency cycles before rendering Nix.
+
 ## Initial Hypothesis
 
 A typed flake should make these things structural instead of conventional:

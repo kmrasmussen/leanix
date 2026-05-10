@@ -46,6 +46,7 @@ inductive Input where
 inductive BuildExpr where
   | nixpkgs : String -> BuildExpr
   | inputPath : String -> BuildExpr
+  | package : String -> BuildExpr
   | runCommand : (name : String) -> (nativeBuildInputs : List BuildExpr) -> (script : String) -> BuildExpr
   deriving Repr, BEq
 

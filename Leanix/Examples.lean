@@ -91,5 +91,78 @@ def selfFlakeWithSource (sourceUrl : String) : Flake where
 def selfFlake : Flake :=
   selfFlakeWithSource "path:.."
 
+def helloToolPackage : Package .x86_64_linux where
+  name := "helloTool"
+  build := .nixpkgs "hello"
+
+def helloWrapperPackage : Package .x86_64_linux where
+  name := "helloWrapper"
+  build := .runCommand "hello-wrapper" [.package "helloTool"] (
+    "mkdir -p \"$out/bin\"\n" ++
+    "cat > \"$out/bin/hello-wrapper\" <<'EOF'\n" ++
+    "#!/bin/sh\n" ++
+    "${self.packages.${system}.helloTool}/bin/hello --version\n" ++
+    "EOF\n" ++
+    "chmod +x \"$out/bin/hello-wrapper\""
+  )
+
+def closureCheck : Check .x86_64_linux where
+  name := "helloWrapper"
+  packageName := "helloWrapper"
+  command := "hello-wrapper > \"$out\""
+
+def closureOutputs : Outputs where
+  packages
+    | .x86_64_linux => [helloToolPackage, helloWrapperPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks
+    | .x86_64_linux => [closureCheck]
+    | _ => []
+
+def closureFlake : Flake where
+  description := "Leanix typed closure example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := closureOutputs
+
+def missingRefPackage : Package .x86_64_linux where
+  name := "broken"
+  build := .runCommand "broken" [.package "missing"] "touch \"$out\""
+
+def missingRefOutputs : Outputs where
+  packages
+    | .x86_64_linux => [missingRefPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks := fun _ => []
+
+def missingRefFlake : Flake where
+  description := "Leanix missing package reference example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := missingRefOutputs
+
+def cyclePackageA : Package .x86_64_linux where
+  name := "cycleA"
+  build := .runCommand "cycle-a" [.package "cycleB"] "touch \"$out\""
+
+def cyclePackageB : Package .x86_64_linux where
+  name := "cycleB"
+  build := .runCommand "cycle-b" [.package "cycleA"] "touch \"$out\""
+
+def cycleOutputs : Outputs where
+  packages
+    | .x86_64_linux => [cyclePackageA, cyclePackageB]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks := fun _ => []
+
+def cycleFlake : Flake where
+  description := "Leanix cyclic package reference example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := cycleOutputs
+
 end Examples
 end Leanix

@@ -55,3 +55,8 @@ flake root.
 The e2e harness belongs in Rust. Lean should render and validate typed graphs;
 Rust should run `lake`, call `nix flake check`, manage generated paths, and
 eventually handle snapshots, caches, lockfiles, and corpus-style tests.
+
+The first graph invariant is package closure. `BuildExpr.package` creates a
+typed edge from one package to another for the same system. Leanix validates
+that every edge points at an existing package and that package edges are
+acyclic before rendering.

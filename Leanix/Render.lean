@@ -23,29 +23,30 @@ def renderOutputArg (inputName : String) : String :=
   else
     inputName
 
-def renderBuildExprWithFuel : Nat -> BuildExpr -> String
+def renderBuildExprWithFuel (system : System) : Nat -> BuildExpr -> String
   | 0, _ => "throw \"Leanix render depth exceeded\""
   | _ + 1, .nixpkgs attr => "pkgs." ++ attr
   | _ + 1, .inputPath name => name
+  | _ + 1, .package name => "self.packages.${system}." ++ name
   | fuel + 1, .runCommand name nativeBuildInputs script =>
       "pkgs.runCommand " ++ renderString name ++
         " { nativeBuildInputs = [ " ++
-        joinWith " " (nativeBuildInputs.map (renderBuildExprListItemWithFuel fuel)) ++
+        joinWith " " (nativeBuildInputs.map (renderBuildExprListItemWithFuel system fuel)) ++
         " ]; } ''\n          " ++ script ++ "\n        ''"
 
 where
-  renderBuildExprListItemWithFuel : Nat -> BuildExpr -> String
+  renderBuildExprListItemWithFuel (system : System) : Nat -> BuildExpr -> String
     | fuel, .runCommand name nativeBuildInputs script =>
-        "(" ++ renderBuildExprWithFuel fuel (.runCommand name nativeBuildInputs script) ++ ")"
-    | fuel, expr => renderBuildExprWithFuel fuel expr
+        "(" ++ renderBuildExprWithFuel system fuel (.runCommand name nativeBuildInputs script) ++ ")"
+    | fuel, expr => renderBuildExprWithFuel system fuel expr
 
-def renderBuildExpr (expr : BuildExpr) : String :=
-  renderBuildExprWithFuel 64 expr
+def renderBuildExpr (system : System) (expr : BuildExpr) : String :=
+  renderBuildExprWithFuel system 64 expr
 
-def renderBuildExprListItem (expr : BuildExpr) : String :=
+def renderBuildExprListItem (system : System) (expr : BuildExpr) : String :=
   match expr with
-  | .runCommand _ _ _ => "(" ++ renderBuildExpr expr ++ ")"
-  | _ => renderBuildExpr expr
+  | .runCommand _ _ _ => "(" ++ renderBuildExpr system expr ++ ")"
+  | _ => renderBuildExpr system expr
 
 def hasOutputs (flake : Flake) (system : System) : Bool :=
   !(flake.outputs.packages system).isEmpty ||
@@ -59,27 +60,30 @@ def activeSystems (flake : Flake) : List System :=
 def findPackage? (packages : List (Package system)) (name : String) : Option (Package system) :=
   packages.find? (fun package => package.name == name)
 
+def renderPackageRef (packageName : String) : String :=
+  "self.packages.${system}." ++ packageName
+
 def renderAttrSet (family : String) (entries : List String) : List String :=
   match entries with
   | [] => []
   | _ => ["      " ++ family ++ ".${system} = {"] ++ entries ++ ["      };"]
 
-def renderPackageEntry (package : Package system) : String :=
-  "        " ++ package.name ++ " = " ++ renderBuildExpr package.build ++ ";"
+def renderPackageEntry (system : System) (package : Package system) : String :=
+  "        " ++ package.name ++ " = " ++ renderBuildExpr system package.build ++ ";"
 
-def renderPackageDefaults (packages : List (Package system)) : List String :=
+def renderPackageDefaults (system : System) (packages : List (Package system)) : List String :=
   match packages with
   | [] => []
   | package :: _ =>
-      ["        default = " ++ renderBuildExpr package.build ++ ";"]
+      ["        default = " ++ renderBuildExpr system package.build ++ ";"]
 
 def renderAppLine (system : System) (packages : List (Package system)) (app : App system) :
     Except String String := do
   match findPackage? packages app.packageName with
   | none => throw s!"app {app.name} refers to missing package {app.packageName}"
-  | some package =>
+  | some _ =>
       pure <| "        " ++ app.name ++
-        " = { type = \"app\"; program = \"${" ++ renderBuildExpr package.build ++ "}/" ++
+        " = { type = \"app\"; program = \"${" ++ renderPackageRef app.packageName ++ "}/" ++
         app.program ++ "\"; };"
 
 def renderAppDefaults (apps : List (App system)) : List String :=
@@ -93,7 +97,7 @@ def renderShellLine (system : System) (packages : List (Package system)) (shell 
   let packageExprs ← shell.packageNames.mapM fun packageName =>
     match findPackage? packages packageName with
     | none => throw s!"devShell {shell.name} refers to missing package {packageName}"
-    | some package => pure (renderBuildExprListItem package.build)
+    | some _ => pure (renderPackageRef packageName)
   pure <| "        " ++ shell.name ++
     " = pkgs.mkShell { packages = [ " ++ joinWith " " packageExprs ++ " ]; };"
 
@@ -101,10 +105,10 @@ def renderCheckLine (system : System) (packages : List (Package system)) (check 
     Except String String := do
   match findPackage? packages check.packageName with
   | none => throw s!"check {check.name} refers to missing package {check.packageName}"
-  | some package =>
+  | some _ =>
       pure <| "        " ++ check.name ++
         " = pkgs.runCommand \"" ++ check.name ++
-        "-check\" { nativeBuildInputs = [ " ++ renderBuildExprListItem package.build ++
+        "-check\" { nativeBuildInputs = [ " ++ renderPackageRef check.packageName ++
         " ]; } ''\n          " ++ check.command ++ "\n        '';"
 
 def renderOutputsForSystem (flake : Flake) (system : System) : Except String (List String) := do
@@ -116,7 +120,7 @@ def renderOutputsForSystem (flake : Flake) (system : System) : Except String (Li
   let shellLines ← devShells.mapM (renderShellLine system packages)
   let checkLines ← checks.mapM (renderCheckLine system packages)
   pure (
-    renderAttrSet "packages" (packages.map renderPackageEntry ++ renderPackageDefaults packages) ++
+    renderAttrSet "packages" (packages.map (renderPackageEntry system) ++ renderPackageDefaults system packages) ++
     renderAttrSet "apps" (appLines ++ renderAppDefaults apps) ++
     renderAttrSet "devShells" shellLines ++
     renderAttrSet "checks" checkLines

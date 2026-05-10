@@ -27,9 +27,62 @@ def validateBuildExprInputRefs (inputNames : List String) : BuildExpr -> Except 
         pure ()
       else
         throw s!"build expression refers to missing input {name}"
+  | .package _ => pure ()
   | .runCommand _ nativeBuildInputs _ =>
       for input in nativeBuildInputs do
         validateBuildExprInputRefs inputNames input
+
+mutual
+def buildExprPackageRefs : BuildExpr -> List String
+  | .nixpkgs _ => []
+  | .inputPath _ => []
+  | .package name => [name]
+  | .runCommand _ nativeBuildInputs _ =>
+      buildExprPackageRefsList nativeBuildInputs
+
+def buildExprPackageRefsList : List BuildExpr -> List String
+  | [] => []
+  | input :: rest => buildExprPackageRefs input ++ buildExprPackageRefsList rest
+end
+
+def validateBuildExprPackageRefs (system : System) (packageNames : List String) (owner : String) :
+    BuildExpr -> Except String Unit
+  | .nixpkgs _ => pure ()
+  | .inputPath _ => pure ()
+  | .package name => validatePackageRef system packageNames owner name
+  | .runCommand _ nativeBuildInputs _ =>
+      for input in nativeBuildInputs do
+        validateBuildExprPackageRefs system packageNames owner input
+
+def findPackageByName? (packages : List (Package system)) (name : String) :
+    Option (Package system) :=
+  packages.find? (fun package => package.name == name)
+
+def packageDeps (package : Package system) : List String :=
+  buildExprPackageRefs package.build
+
+def reachesPackageWithFuel (packages : List (Package system)) (target : String)
+    (current : String) : Nat -> Bool
+  | 0 => false
+  | fuel + 1 =>
+      if current == target then
+        true
+      else
+        match findPackageByName? packages current with
+        | none => false
+        | some package =>
+            (packageDeps package).any fun next =>
+              reachesPackageWithFuel packages target next fuel
+
+def validateNoPackageCycles (system : System) (packages : List (Package system)) :
+    Except String Unit := do
+  let fuel := packages.length + 1
+  for package in packages do
+    for dep in packageDeps package do
+      if reachesPackageWithFuel packages package.name dep fuel then
+        throw s!"package dependency cycle for {system.toNixString}: {package.name} reaches itself through {dep}"
+      else
+        pure ()
 
 def validateSystemOutputs (flake : Flake) (system : System) : Except String Unit := do
   let packages := flake.outputs.packages system
@@ -46,6 +99,9 @@ def validateSystemOutputs (flake : Flake) (system : System) : Except String Unit
 
   for package in packages do
     validateBuildExprInputRefs inputNames package.build
+    validateBuildExprPackageRefs system packageNames s!"package {package.name}" package.build
+
+  validateNoPackageCycles system packages
 
   for app in apps do
     validatePackageRef system packageNames s!"app {app.name}" app.packageName
