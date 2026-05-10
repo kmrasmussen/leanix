@@ -31,6 +31,9 @@ def validateBuildExprInputRefs (inputNames : List String) : BuildExpr -> Except 
   | .runCommand _ nativeBuildInputs _ =>
       for input in nativeBuildInputs do
         validateBuildExprInputRefs inputNames input
+  | .runSteps _ nativeBuildInputs _ =>
+      for input in nativeBuildInputs do
+        validateBuildExprInputRefs inputNames input
 
 mutual
 def buildExprPackageRefs : BuildExpr -> List String
@@ -38,6 +41,8 @@ def buildExprPackageRefs : BuildExpr -> List String
   | .inputPath _ => []
   | .package name => [name]
   | .runCommand _ nativeBuildInputs _ =>
+      buildExprPackageRefsList nativeBuildInputs
+  | .runSteps _ nativeBuildInputs _ =>
       buildExprPackageRefsList nativeBuildInputs
 
 def buildExprPackageRefsList : List BuildExpr -> List String
@@ -51,6 +56,9 @@ def validateBuildExprPackageRefs (system : System) (packageNames : List String) 
   | .inputPath _ => pure ()
   | .package name => validatePackageRef system packageNames owner name
   | .runCommand _ nativeBuildInputs _ =>
+      for input in nativeBuildInputs do
+        validateBuildExprPackageRefs system packageNames owner input
+  | .runSteps _ nativeBuildInputs _ =>
       for input in nativeBuildInputs do
         validateBuildExprPackageRefs system packageNames owner input
 

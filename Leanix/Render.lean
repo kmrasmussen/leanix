@@ -33,11 +33,28 @@ def renderBuildExprWithFuel (system : System) : Nat -> BuildExpr -> String
         " { nativeBuildInputs = [ " ++
         joinWith " " (nativeBuildInputs.map (renderBuildExprListItemWithFuel system fuel)) ++
         " ]; } ''\n          " ++ script ++ "\n        ''"
+  | fuel + 1, .runSteps name nativeBuildInputs steps =>
+      "pkgs.runCommand " ++ renderString name ++
+        " { nativeBuildInputs = [ " ++
+        joinWith " " (nativeBuildInputs.map (renderBuildExprListItemWithFuel system fuel)) ++
+        " ]; } ''\n" ++ renderBuildSteps steps ++ "\n        ''"
 
 where
+  renderBuildStep : BuildStep -> String
+    | .mkdir path => "          mkdir -p " ++ renderString path
+    | .writeFile path content =>
+        "          cat > " ++ renderString path ++ " <<'EOF'\n" ++ content ++ "\nEOF"
+    | .chmodExecutable path => "          chmod +x " ++ renderString path
+    | .run command => "          " ++ command
+
+  renderBuildSteps (steps : List BuildStep) : String :=
+    joinWith "\n" (steps.map renderBuildStep)
+
   renderBuildExprListItemWithFuel (system : System) : Nat -> BuildExpr -> String
     | fuel, .runCommand name nativeBuildInputs script =>
         "(" ++ renderBuildExprWithFuel system fuel (.runCommand name nativeBuildInputs script) ++ ")"
+    | fuel, .runSteps name nativeBuildInputs steps =>
+        "(" ++ renderBuildExprWithFuel system fuel (.runSteps name nativeBuildInputs steps) ++ ")"
     | fuel, expr => renderBuildExprWithFuel system fuel expr
 
 def renderBuildExpr (system : System) (expr : BuildExpr) : String :=
@@ -46,6 +63,7 @@ def renderBuildExpr (system : System) (expr : BuildExpr) : String :=
 def renderBuildExprListItem (system : System) (expr : BuildExpr) : String :=
   match expr with
   | .runCommand _ _ _ => "(" ++ renderBuildExpr system expr ++ ")"
+  | .runSteps _ _ _ => "(" ++ renderBuildExpr system expr ++ ")"
   | _ => renderBuildExpr system expr
 
 def hasOutputs (flake : Flake) (system : System) : Bool :=

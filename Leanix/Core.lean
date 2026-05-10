@@ -43,11 +43,19 @@ inductive Input where
   | localSource : String -> Input
   deriving Repr, BEq
 
+inductive BuildStep where
+  | mkdir : String -> BuildStep
+  | writeFile : (path : String) -> (content : String) -> BuildStep
+  | chmodExecutable : String -> BuildStep
+  | run : String -> BuildStep
+  deriving Repr, BEq
+
 inductive BuildExpr where
   | nixpkgs : String -> BuildExpr
   | inputPath : String -> BuildExpr
   | package : String -> BuildExpr
   | runCommand : (name : String) -> (nativeBuildInputs : List BuildExpr) -> (script : String) -> BuildExpr
+  | runSteps : (name : String) -> (nativeBuildInputs : List BuildExpr) -> (steps : List BuildStep) -> BuildExpr
   deriving Repr, BEq
 
 structure EnvVar where

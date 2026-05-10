@@ -24,3 +24,8 @@ semantically.
    scripts.
 2. The generated flakes still pass through the Rust e2e harness.
 3. Remaining shell escape hatches are explicit and documented.
+
+## Progress
+- Added `BuildStep` and `BuildExpr.runSteps`.
+- Migrated the closure example's executable wrapper to structured steps.
+- Raw `runCommand` remains for self-build and check commands.

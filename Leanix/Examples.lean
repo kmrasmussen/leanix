@@ -97,14 +97,14 @@ def helloToolPackage : Package .x86_64_linux where
 
 def helloWrapperPackage : Package .x86_64_linux where
   name := "helloWrapper"
-  build := .runCommand "hello-wrapper" [.package "helloTool"] (
-    "mkdir -p \"$out/bin\"\n" ++
-    "cat > \"$out/bin/hello-wrapper\" <<'EOF'\n" ++
-    "#!/bin/sh\n" ++
-    "${self.packages.${system}.helloTool}/bin/hello --version\n" ++
-    "EOF\n" ++
-    "chmod +x \"$out/bin/hello-wrapper\""
-  )
+  build := .runSteps "hello-wrapper" [.package "helloTool"] [
+    .mkdir "$out/bin",
+    .writeFile "$out/bin/hello-wrapper" (
+      "#!/bin/sh\n" ++
+      "${self.packages.${system}.helloTool}/bin/hello --version"
+    ),
+    .chmodExecutable "$out/bin/hello-wrapper"
+  ]
 
 def closureCheck : Check .x86_64_linux where
   name := "helloWrapper"
