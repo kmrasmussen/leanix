@@ -69,3 +69,7 @@ continue as before.
 The schema boundary is explicit: raw schema values pass through
 `ValidatedSchema.validate`, and downstream code can require `ValidatedSchema`
 instead of accepting unchecked schema data.
+
+For `CliProject`, this is now proof-carrying rather than only a marker:
+`CliProject.Valid` records the equalities and membership check that validation
+established.

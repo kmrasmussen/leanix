@@ -171,7 +171,7 @@ def helloCliProject : CliProject .x86_64_linux where
   check := { helloCheck with name := "default" }
 
 def helloCliValidatedSchema : Except String (ValidatedSchema (CliProject .x86_64_linux)) :=
-  ValidatedSchema.validate helloCliProject
+  CliProject.validateChecked helloCliProject
 
 def helloCliSchemaFlake : Except String Flake :=
   helloCliValidatedSchema.map fun validated =>

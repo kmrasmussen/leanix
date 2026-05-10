@@ -23,6 +23,9 @@ Schema validation now has an explicit type boundary. Raw schemas become
 `ValidatedSchema` values before they can be lowered through the validated-schema
 API.
 
+For `CliProject`, `ValidatedSchema` now carries proof fields for the schema
+invariants: default output names, package references, and dev shell membership.
+
 ## Initial Hypothesis
 
 A typed flake should make these things structural instead of conventional:
