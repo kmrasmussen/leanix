@@ -365,8 +365,72 @@ fn run_invalid_case(repo: &Path, case: &InvalidCase) -> Result<(), String> {
     }
 }
 
+fn usage() -> &'static str {
+    "usage: leanix-e2e-runner [--repo PATH]\n       leanix-e2e-runner --help"
+}
+
+fn is_repo_root(path: &Path) -> bool {
+    path.join("lakefile.lean").is_file() && path.join("e2e/runner/Cargo.toml").is_file()
+}
+
+fn find_repo_root(start: &Path) -> Option<PathBuf> {
+    let mut candidate = start.to_path_buf();
+    loop {
+        if is_repo_root(&candidate) {
+            return Some(candidate);
+        }
+        if !candidate.pop() {
+            return None;
+        }
+    }
+}
+
+fn absolute_path(path: &Path) -> Result<PathBuf, String> {
+    if path.is_absolute() {
+        Ok(path.to_path_buf())
+    } else {
+        env::current_dir()
+            .map_err(|err| format!("failed to read current directory: {err}"))
+            .map(|cwd| cwd.join(path))
+    }
+}
+
+fn parse_repo_arg() -> Result<Option<PathBuf>, String> {
+    let args: Vec<String> = env::args().skip(1).collect();
+    match args.as_slice() {
+        [] => Ok(None),
+        [flag] if flag == "--help" || flag == "-h" => {
+            println!("{}", usage());
+            std::process::exit(0);
+        }
+        [flag, path] if flag == "--repo" => absolute_path(Path::new(path)).map(Some),
+        _ => Err(format!(
+            "{}\nunknown arguments: {}",
+            usage(),
+            args.join(" ")
+        )),
+    }
+}
+
 fn repo_root() -> Result<PathBuf, String> {
-    env::current_dir().map_err(|err| format!("failed to read current directory: {err}"))
+    if let Some(explicit) = parse_repo_arg()? {
+        if is_repo_root(&explicit) {
+            return Ok(explicit);
+        }
+        return Err(format!(
+            "--repo path '{}' is not a Leanix repository root; expected lakefile.lean and e2e/runner/Cargo.toml",
+            explicit.display()
+        ));
+    }
+
+    let current =
+        env::current_dir().map_err(|err| format!("failed to read current directory: {err}"))?;
+    find_repo_root(&current).ok_or_else(|| {
+        format!(
+            "could not find Leanix repository root from '{}'; expected lakefile.lean and e2e/runner/Cargo.toml in this directory or a parent",
+            current.display()
+        )
+    })
 }
 
 fn main() -> Result<(), String> {

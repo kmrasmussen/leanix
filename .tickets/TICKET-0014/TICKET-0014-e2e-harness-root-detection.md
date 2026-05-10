@@ -49,3 +49,12 @@ isn't there.
    only if a marker is found there.
 2. Add a `--repo` flag.
 3. Add a usage line to the binary so `--help` works.
+
+## Progress
+- Added `--help` usage output and `--repo PATH`.
+- Added explicit marker validation using `lakefile.lean` and
+  `e2e/runner/Cargo.toml`.
+- Added upward repository-root detection from the current directory.
+- Verified the normal root invocation, a subdirectory invocation from
+  `e2e/golden`, an explicit `--repo /home/kasper/projects/leanix` invocation
+  from `/tmp`, and `--help`.
