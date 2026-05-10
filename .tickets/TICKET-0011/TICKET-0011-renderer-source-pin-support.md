@@ -57,3 +57,14 @@ to carry.
   for `nixos-unstable`-style references; `source` inputs should not).
 - Coordinate with `TICKET-0006` so the model side and renderer side land
   consistent shapes.
+
+## Progress
+- Render `github:` flake inputs carrying pin metadata as explicit flake input
+  attrsets with `type`, `owner`, `repo`, optional `ref`, `rev`, and `narHash`.
+- Preserve path-style flake pin metadata by appending supported query
+  parameters.
+- Keep unpinned flake inputs in the compact `.url` form.
+- Added a pinned-nixpkgs golden renderer fixture that records both `rev` and
+  `narHash` and passes `nix flake check`.
+- Added a hashed local source fixture e2e case that renders `builtins.fetchTree`
+  with `narHash` and builds through `nix flake check`.

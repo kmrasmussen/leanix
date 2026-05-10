@@ -303,6 +303,38 @@ fn run_source_injection_case(repo: &Path) -> Result<(), String> {
     }
 }
 
+fn run_hashed_source_case(repo: &Path) -> Result<(), String> {
+    let output = "generated/flake.nix";
+    let source = format!("path:{}", repo.join("e2e/source-fixture").display());
+    eprintln!("case: hashed source input");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "render-hashed-source",
+            "--source",
+            &source,
+            "--out",
+            output,
+        ],
+    )?;
+    let rendered = fs::read_to_string(repo.join(output))
+        .map_err(|err| format!("failed reading hashed source output: {err}"))?;
+    for expected in [
+        "type = \"path\";",
+        "narHash = \"sha256-jsgXtBABq0OCdKEeY0mS7yzxEAn4GAJgw7zldbIgGGw=\";",
+        "fixtureSrc = (builtins.fetchTree",
+    ] {
+        if !rendered.contains(expected) {
+            return Err(format!("hashed source output missing '{expected}'"));
+        }
+    }
+    run(repo, "nix", &["flake", "check", "path:./generated"])?;
+    Ok(())
+}
+
 fn run_invalid_case(repo: &Path, case: &InvalidCase) -> Result<(), String> {
     let output = "generated/invalid-flake.nix";
     eprintln!("case: {}", case.name);
@@ -389,6 +421,13 @@ fn main() -> Result<(), String> {
             lean_source: None,
             golden: Some("e2e/golden/multi-system.flake.nix"),
         },
+        Case {
+            name: "pinned flake input",
+            render_arg: "render-pinned-inputs",
+            source_arg: false,
+            lean_source: None,
+            golden: Some("e2e/golden/pinned-inputs.flake.nix"),
+        },
     ];
     let invalid_cases = [
         InvalidCase {
@@ -421,6 +460,7 @@ fn main() -> Result<(), String> {
 
     run_artifact_case(&repo)?;
     run_source_injection_case(&repo)?;
+    run_hashed_source_case(&repo)?;
 
     for case in invalid_cases {
         run_invalid_case(&repo, &case)?;

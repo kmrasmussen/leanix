@@ -9,6 +9,16 @@ def nixpkgsInput : Input :=
     url := "github:NixOS/nixpkgs/nixos-unstable"
   }
 
+def pinnedNixpkgsInput : Input :=
+  .flake {
+    url := "github:NixOS/nixpkgs/nixos-unstable"
+    rev? := some "549bd84d6279f9852cae6225e372cc67fb91a4c1"
+    narHash? := some {
+      algorithm := .sha256
+      digest := "hGdgeU2Nk87RAuZyYjyDjFL6LK7dAZN5RE9+hrDTkDU="
+    }
+  }
+
 def helloPackage : Package .x86_64_linux where
   name := "hello"
   build := .nixpkgs "hello"
@@ -100,6 +110,54 @@ def unhashedSourceFlake : Flake where
     ("nixpkgs", nixpkgsInput),
     ("unhashedSrc", unhashedSourceInput)
   ]
+  outputs := helloOutputs
+
+def hashedSourceInput (url : String) : Input :=
+  .source {
+    url := url
+    narHash? := some {
+      algorithm := .sha256
+      digest := "jsgXtBABq0OCdKEeY0mS7yzxEAn4GAJgw7zldbIgGGw="
+    }
+  }
+
+def sourceFixturePackage : Package .x86_64_linux where
+  name := "sourceFixture"
+  build := .runSteps "source-fixture" [] [
+    .copySource (.inputPath "fixtureSrc") "source",
+    .mkdir "$out",
+    .run "cp source/message.txt \"$out/message.txt\""
+  ]
+
+def sourceFixtureCheck : Check .x86_64_linux where
+  name := "sourceFixture"
+  packageName := "sourceFixture"
+  command := "touch \"$out\""
+
+def sourceFixtureOutputs : Outputs where
+  packages
+    | .x86_64_linux => [sourceFixturePackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks
+    | .x86_64_linux => [sourceFixtureCheck]
+    | _ => []
+
+def sourceFixtureFlakeWithSource (sourceUrl : String) : Flake where
+  description := "Leanix hashed source input example"
+  inputs := [
+    ("nixpkgs", nixpkgsInput),
+    ("fixtureSrc", hashedSourceInput sourceUrl)
+  ]
+  outputs := sourceFixtureOutputs
+
+def sourceFixtureFlake : Flake :=
+  sourceFixtureFlakeWithSource "path:../e2e/source-fixture"
+
+def pinnedInputFlake : Flake where
+  description := "Leanix pinned flake input example"
+  inputs := [("nixpkgs", pinnedNixpkgsInput)]
   outputs := helloOutputs
 
 def helloToolPackage : Package .x86_64_linux where

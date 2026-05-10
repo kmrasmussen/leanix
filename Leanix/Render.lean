@@ -58,9 +58,123 @@ def HashAlgorithm.toNixString : HashAlgorithm -> String
 def renderContentHash (hash : ContentHash) : String :=
   hash.algorithm.toNixString ++ "-" ++ hash.digest
 
+def containsChar (needle : Char) : List Char -> Bool
+  | [] => false
+  | c :: rest => c == needle || containsChar needle rest
+
+def stripPrefixChars? : List Char -> List Char -> Option (List Char)
+  | [], chars => some chars
+  | _ :: _, [] => none
+  | pfx :: prefixRest, c :: rest =>
+      if pfx == c then
+        stripPrefixChars? prefixRest rest
+      else
+        none
+
+def stripPrefix? (pfx : String) (value : String) : Option String :=
+  match stripPrefixChars? pfx.toList value.toList with
+  | some rest => some (String.ofList rest)
+  | none => none
+
+def splitOnCharAux (sep : Char) : List Char -> List Char -> List String -> List String
+  | [], current, parts => (String.ofList current.reverse :: parts).reverse
+  | c :: rest, current, parts =>
+      if c == sep then
+        splitOnCharAux sep rest [] (String.ofList current.reverse :: parts)
+      else
+        splitOnCharAux sep rest (c :: current) parts
+
+def splitOnChar (sep : Char) (value : String) : List String :=
+  splitOnCharAux sep value.toList [] []
+
+structure GithubPin where
+  owner : String
+  repo : String
+  ref? : Option String
+  deriving Repr, BEq
+
+def parseGithubPin? (url : String) : Option GithubPin :=
+  match stripPrefix? "github:" url with
+  | none => none
+  | some rest =>
+      match splitOnChar '/' rest with
+      | owner :: repo :: [] => some { owner := owner, repo := repo, ref? := none }
+      | owner :: repo :: refParts =>
+          some { owner := owner, repo := repo, ref? := some (joinWith "/" refParts) }
+      | _ => none
+
+def escapeUrlQueryChars : List Char -> String
+  | [] => ""
+  | ' ' :: rest => "%20" ++ escapeUrlQueryChars rest
+  | '"' :: rest => "%22" ++ escapeUrlQueryChars rest
+  | '#' :: rest => "%23" ++ escapeUrlQueryChars rest
+  | '%' :: rest => "%25" ++ escapeUrlQueryChars rest
+  | '&' :: rest => "%26" ++ escapeUrlQueryChars rest
+  | '+' :: rest => "%2B" ++ escapeUrlQueryChars rest
+  | '/' :: rest => "%2F" ++ escapeUrlQueryChars rest
+  | '=' :: rest => "%3D" ++ escapeUrlQueryChars rest
+  | '?' :: rest => "%3F" ++ escapeUrlQueryChars rest
+  | c :: rest => c.toString ++ escapeUrlQueryChars rest
+
+def escapeUrlQuery (value : String) : String :=
+  escapeUrlQueryChars value.toList
+
+def appendQueryParam (url : String) (key : String) (value : String) : String :=
+  let sep := if containsChar '?' url.toList then "&" else "?"
+  url ++ sep ++ key ++ "=" ++ escapeUrlQuery value
+
+def renderPathPinnedUrl (pin : SourcePin) : String :=
+  let withRev :=
+    match pin.rev? with
+    | none => pin.url
+    | some rev => appendQueryParam pin.url "rev" rev
+  match pin.narHash? with
+  | none => withRev
+  | some hash => appendQueryParam withRev "narHash" (renderContentHash hash)
+
+def hasPinMetadata (pin : SourcePin) : Bool :=
+  match pin.rev?, pin.narHash? with
+  | none, none => false
+  | _, _ => true
+
+def renderGithubInput (name : String) (github : GithubPin) (pin : SourcePin) : String :=
+  joinWith "\n" <| [
+    "    " ++ renderAttrName name ++ " = {",
+    "      type = \"github\";",
+    "      owner = " ++ renderString github.owner ++ ";",
+    "      repo = " ++ renderString github.repo ++ ";"
+  ] ++
+  (match github.ref? with
+    | none => []
+    | some ref => ["      ref = " ++ renderString ref ++ ";"]) ++
+  (match pin.rev? with
+    | none => []
+    | some rev => ["      rev = " ++ renderString rev ++ ";"]) ++
+  (match pin.narHash? with
+    | none => []
+    | some hash => ["      narHash = " ++ renderString (renderContentHash hash) ++ ";"]) ++
+  [
+    "    };"
+  ]
+
+def renderFlakeInput (name : String) (pin : SourcePin) : Except String String := do
+  if hasPinMetadata pin then
+    match parseGithubPin? pin.url with
+    | some github => pure <| renderGithubInput name github pin
+    | none =>
+        match stripPrefix? "path:" pin.url with
+        | some _ =>
+            pure s!"    {renderAttrName name}.url = {renderString (renderPathPinnedUrl pin)};"
+        | none =>
+            throw s!"flake input {name} carries pin metadata, but only github: and path: flake refs are supported"
+  else
+    pure s!"    {renderAttrName name}.url = {renderString pin.url};"
+
 def renderInputLine? (input : String × Input) : Except String (Option String) := do
   match input.snd with
-  | .flake pin => pure (some s!"    {renderAttrName input.fst}.url = {renderString pin.url};")
+  | .flake pin => do
+      let rendered ← renderFlakeInput input.fst pin
+      pure (some rendered)
   | .localDevSource path =>
       pure <| some <| joinWith "\n" [
         s!"    # Leanix: local development-only source.",
@@ -87,13 +201,23 @@ def renderSourceBinding? (input : String × Input) : Except String (Option (List
   | .source pin =>
       match pin.narHash? with
       | some narHash =>
-          pure <| some [
-            "      " ++ input.fst ++ " = (builtins.fetchTree {",
-            "        type = \"tarball\";",
-            "        url = " ++ renderString pin.url ++ ";",
-            "        narHash = " ++ renderString (renderContentHash narHash) ++ ";",
-            "      }).outPath;"
-          ]
+          match stripPrefix? "path:" pin.url with
+          | some path =>
+              pure <| some [
+                "      " ++ input.fst ++ " = (builtins.fetchTree {",
+                "        type = \"path\";",
+                "        path = " ++ renderString path ++ ";",
+                "        narHash = " ++ renderString (renderContentHash narHash) ++ ";",
+                "      }).outPath;"
+              ]
+          | none =>
+              pure <| some [
+                "      " ++ input.fst ++ " = (builtins.fetchTree {",
+                "        type = \"tarball\";",
+                "        url = " ++ renderString pin.url ++ ";",
+                "        narHash = " ++ renderString (renderContentHash narHash) ++ ";",
+                "      }).outPath;"
+              ]
       | none => throw s!"source input {input.fst} must have a narHash"
   | _ => pure none
 
