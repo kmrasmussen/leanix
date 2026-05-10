@@ -1,7 +1,7 @@
 import Leanix
 
 def usage : String :=
-  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix"
+  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix"
 
 def renderToFile (flake : Leanix.Flake) (outputPath : String) : IO UInt32 := do
   match Leanix.renderFlake flake with
@@ -10,6 +10,13 @@ def renderToFile (flake : Leanix.Flake) (outputPath : String) : IO UInt32 := do
       IO.FS.writeFile outputPath rendered
       IO.println s!"wrote {outputPath}"
       pure 0
+  | .error error =>
+      IO.eprintln s!"error: {error}"
+      pure 1
+
+def renderExceptToFile (flake : Except String Leanix.Flake) (outputPath : String) : IO UInt32 := do
+  match flake with
+  | .ok value => renderToFile value outputPath
   | .error error =>
       IO.eprintln s!"error: {error}"
       pure 1
@@ -23,6 +30,10 @@ def main (args : List String) : IO UInt32 := do
       renderToFile Leanix.Examples.helloFlake outputPath
   | ["render-closure", "--out", outputPath] =>
       renderToFile Leanix.Examples.closureFlake outputPath
+  | ["render-cli-schema", "--out", outputPath] =>
+      renderExceptToFile Leanix.Examples.helloCliSchemaFlake outputPath
+  | ["render-invalid-cli-schema", "--out", outputPath] =>
+      renderExceptToFile Leanix.Examples.brokenCliSchemaFlake outputPath
   | ["render-invalid-missing-ref", "--out", outputPath] =>
       renderToFile Leanix.Examples.missingRefFlake outputPath
   | ["render-invalid-cycle", "--out", outputPath] =>

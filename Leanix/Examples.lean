@@ -1,4 +1,4 @@
-import Leanix.Core
+import Leanix.Schema
 
 namespace Leanix
 namespace Examples
@@ -163,6 +163,24 @@ def cycleFlake : Flake where
   description := "Leanix cyclic package reference example"
   inputs := [("nixpkgs", nixpkgsInput)]
   outputs := cycleOutputs
+
+def helloCliProject : CliProject .x86_64_linux where
+  package := helloPackage
+  app := { helloApp with name := "default" }
+  devShell := helloDevShell
+  check := { helloCheck with name := "default" }
+
+def helloCliSchemaFlake : Except String Flake :=
+  Flake.fromSchema "Leanix typed CLI schema example" [("nixpkgs", nixpkgsInput)] helloCliProject
+
+def brokenCliProject : CliProject .x86_64_linux where
+  package := helloPackage
+  app := { helloApp with name := "default", packageName := "missing" }
+  devShell := helloDevShell
+  check := { helloCheck with name := "default" }
+
+def brokenCliSchemaFlake : Except String Flake :=
+  Flake.fromSchema "Leanix invalid CLI schema example" [("nixpkgs", nixpkgsInput)] brokenCliProject
 
 end Examples
 end Leanix

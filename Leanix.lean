@@ -1,4 +1,5 @@
 import Leanix.Core
 import Leanix.Validate
+import Leanix.Schema
 import Leanix.Examples
 import Leanix.Render

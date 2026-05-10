@@ -103,6 +103,11 @@ fn main() -> Result<(), String> {
             render_arg: "render-closure",
             source_arg: false,
         },
+        Case {
+            name: "typed CLI schema flake",
+            render_arg: "render-cli-schema",
+            source_arg: false,
+        },
     ];
     let invalid_cases = [
         InvalidCase {
@@ -112,6 +117,10 @@ fn main() -> Result<(), String> {
         InvalidCase {
             name: "package dependency cycle",
             render_arg: "render-invalid-cycle",
+        },
+        InvalidCase {
+            name: "invalid CLI schema",
+            render_arg: "render-invalid-cli-schema",
         },
     ];
 

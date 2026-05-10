@@ -75,7 +75,10 @@ def renderPackageDefaults (system : System) (packages : List (Package system)) :
   match packages with
   | [] => []
   | package :: _ =>
-      ["        default = " ++ renderBuildExpr system package.build ++ ";"]
+      if packages.any (fun package => package.name == "default") then
+        []
+      else
+        ["        default = " ++ renderBuildExpr system package.build ++ ";"]
 
 def renderAppLine (system : System) (packages : List (Package system)) (app : App system) :
     Except String String := do
@@ -90,7 +93,10 @@ def renderAppDefaults (apps : List (App system)) : List String :=
   match apps with
   | [] => []
   | app :: _ =>
-      ["        default = self.apps.${system}." ++ app.name ++ ";"]
+      if apps.any (fun app => app.name == "default") then
+        []
+      else
+        ["        default = self.apps.${system}." ++ app.name ++ ";"]
 
 def renderShellLine (system : System) (packages : List (Package system)) (shell : DevShell system) :
     Except String String := do

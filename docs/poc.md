@@ -60,3 +60,8 @@ The first graph invariant is package closure. `BuildExpr.package` creates a
 typed edge from one package to another for the same system. Leanix validates
 that every edge points at an existing package and that package edges are
 acyclic before rendering.
+
+The first schema invariant is `CliProject`: one package, default app, default
+dev shell, and default check. The schema validates this typed contract and then
+lowers it to ordinary flake `Outputs`, where graph validation and rendering
+continue as before.

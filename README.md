@@ -15,6 +15,10 @@ Leanix now validates first-order package closure: package build expressions can
 refer to other packages, and Lean rejects missing package references and package
 dependency cycles before rendering Nix.
 
+Leanix also has its first typed output schema. `CliProject` lowers a typed
+package/app/dev shell/check contract to ordinary flake outputs after validating
+that the conventional defaults point at the project package.
+
 ## Initial Hypothesis
 
 A typed flake should make these things structural instead of conventional:
@@ -62,6 +66,7 @@ lakefile.lean    -- Lean package
 lake build
 lake exe leanix
 lake exe leanix render-example --out generated/flake.nix
+lake exe leanix render-cli-schema --out generated/flake.nix
 nix flake check path:./generated
 lake exe leanix render-self --source path:/home/kasper/projects/leanix --out generated/flake.nix
 cargo run --locked --manifest-path e2e/runner/Cargo.toml
