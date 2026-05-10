@@ -40,6 +40,13 @@ structure SourcePin where
 inductive Input where
   | flake : SourcePin -> Input
   | source : SourcePin -> Input
+  | localSource : String -> Input
+  deriving Repr, BEq
+
+inductive BuildExpr where
+  | nixpkgs : String -> BuildExpr
+  | inputPath : String -> BuildExpr
+  | runCommand : (name : String) -> (nativeBuildInputs : List BuildExpr) -> (script : String) -> BuildExpr
   deriving Repr, BEq
 
 structure EnvVar where
@@ -49,7 +56,7 @@ structure EnvVar where
 
 structure Package (system : System) where
   name : String
-  builder : String
+  build : BuildExpr
   args : List String := []
   inputs : List Input := []
   env : List EnvVar := []

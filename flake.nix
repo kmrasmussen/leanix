@@ -16,13 +16,20 @@
       checks = forAllSystems (pkgs: {
         build = pkgs.runCommand "leanix-build"
           {
-            nativeBuildInputs = [ pkgs.lean4 ];
+            nativeBuildInputs = [
+              pkgs.lean4
+              pkgs.cargo
+              pkgs.rustc
+              pkgs.stdenv.cc
+              pkgs.git
+            ];
             src = self;
           } ''
           cp -R "$src" source
           chmod -R u+w source
           cd source
           lake build
+          cargo check --locked --manifest-path e2e/runner/Cargo.toml
           touch "$out"
         '';
       });
@@ -31,6 +38,9 @@
         default = pkgs.mkShell {
           packages = [
             pkgs.lean4
+            pkgs.cargo
+            pkgs.rustc
+            pkgs.rustfmt
             pkgs.git
           ];
         };

@@ -17,9 +17,15 @@ existing Nix mean?" Leanix asks, "what if flakes were typed first?"
 - Keep the model small and executable before adding proof obligations.
 - Prefer explicit typed structures over stringly-typed attrset conventions.
 - Separate pure build graph modeling from any future shelling out to Nix.
+- Put harnesses, e2e tests, subprocess orchestration, filesystem crawling, and
+  cache/lockfile workflows in Rust rather than Lean.
 - Treat Nix interop as an output/backend problem, not as the source of truth.
 - Run `lake build` after Lean changes.
+- Run `cargo run --locked --manifest-path e2e/runner/Cargo.toml` after renderer,
+  CLI, generated-flake, or e2e changes.
 - Write design notes when introducing major concepts.
+- Write dated blog notes in `blog/yyyy-mm-dd-hh-mm-name.md` for meaningful
+  project steps.
 
 ## Near-Term Direction
 

@@ -20,17 +20,32 @@ def validatePackageRef (system : System) (packageNames : List String) (owner : S
   else
     throw s!"{owner} for {system.toNixString} refers to missing package {packageName}"
 
+def validateBuildExprInputRefs (inputNames : List String) : BuildExpr -> Except String Unit
+  | .nixpkgs _ => pure ()
+  | .inputPath name =>
+      if inputNames.contains name then
+        pure ()
+      else
+        throw s!"build expression refers to missing input {name}"
+  | .runCommand _ nativeBuildInputs _ =>
+      for input in nativeBuildInputs do
+        validateBuildExprInputRefs inputNames input
+
 def validateSystemOutputs (flake : Flake) (system : System) : Except String Unit := do
   let packages := flake.outputs.packages system
   let apps := flake.outputs.apps system
   let devShells := flake.outputs.devShells system
   let checks := flake.outputs.checks system
   let packageNames := packages.map (fun package => package.name)
+  let inputNames := flake.inputs.map (fun input => input.fst)
 
   validateUniqueNames system "package" packageNames
   validateUniqueNames system "app" (apps.map (fun app => app.name))
   validateUniqueNames system "devShell" (devShells.map (fun shell => shell.name))
   validateUniqueNames system "check" (checks.map (fun check => check.name))
+
+  for package in packages do
+    validateBuildExprInputRefs inputNames package.build
 
   for app in apps do
     validatePackageRef system packageNames s!"app {app.name}" app.packageName
@@ -45,6 +60,7 @@ def validateSystemOutputs (flake : Flake) (system : System) : Except String Unit
 def validateInput (name : String) (input : Input) : Except String Unit := do
   match input with
   | .flake _ => pure ()
+  | .localSource _ => pure ()
   | .source pin =>
       match pin.narHash? with
       | some _ => pure ()

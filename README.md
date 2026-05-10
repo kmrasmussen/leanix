@@ -8,6 +8,9 @@ Leanix is an adjacent project to `nixparserlean`.
 what if flakes were typed first? Lean becomes the authoring language for
 reproducible build graphs, and Nix interop becomes a backend.
 
+Lean owns the typed model, validation, and rendering. Rust owns e2e harnesses,
+subprocess orchestration, filesystem work, and generated-flake smoke tests.
+
 ## Initial Hypothesis
 
 A typed flake should make these things structural instead of conventional:
@@ -56,4 +59,6 @@ lake build
 lake exe leanix
 lake exe leanix render-example --out generated/flake.nix
 nix flake check path:./generated
+lake exe leanix render-self --source path:/home/kasper/projects/leanix --out generated/flake.nix
+cargo run --locked --manifest-path e2e/runner/Cargo.toml
 ```

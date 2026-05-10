@@ -13,7 +13,39 @@ def renderString (value : String) : String :=
 def renderInputLine (input : String × Input) : Except String String := do
   match input.snd with
   | .flake pin => pure s!"    {input.fst}.url = {renderString pin.url};"
-  | .source _ => throw "the PoC renderer only supports flake inputs"
+  | .localSource path =>
+      pure <| "    " ++ input.fst ++ " = { url = " ++ renderString path ++ "; flake = false; };"
+  | .source _ => throw "the renderer does not support hashed source inputs yet"
+
+def renderOutputArg (inputName : String) : String :=
+  if inputName == "nixpkgs" then
+    "nixpkgs"
+  else
+    inputName
+
+def renderBuildExprWithFuel : Nat -> BuildExpr -> String
+  | 0, _ => "throw \"Leanix render depth exceeded\""
+  | _ + 1, .nixpkgs attr => "pkgs." ++ attr
+  | _ + 1, .inputPath name => name
+  | fuel + 1, .runCommand name nativeBuildInputs script =>
+      "pkgs.runCommand " ++ renderString name ++
+        " { nativeBuildInputs = [ " ++
+        joinWith " " (nativeBuildInputs.map (renderBuildExprListItemWithFuel fuel)) ++
+        " ]; } ''\n          " ++ script ++ "\n        ''"
+
+where
+  renderBuildExprListItemWithFuel : Nat -> BuildExpr -> String
+    | fuel, .runCommand name nativeBuildInputs script =>
+        "(" ++ renderBuildExprWithFuel fuel (.runCommand name nativeBuildInputs script) ++ ")"
+    | fuel, expr => renderBuildExprWithFuel fuel expr
+
+def renderBuildExpr (expr : BuildExpr) : String :=
+  renderBuildExprWithFuel 64 expr
+
+def renderBuildExprListItem (expr : BuildExpr) : String :=
+  match expr with
+  | .runCommand _ _ _ => "(" ++ renderBuildExpr expr ++ ")"
+  | _ => renderBuildExpr expr
 
 def hasOutputs (flake : Flake) (system : System) : Bool :=
   !(flake.outputs.packages system).isEmpty ||
@@ -33,13 +65,13 @@ def renderAttrSet (family : String) (entries : List String) : List String :=
   | _ => ["      " ++ family ++ ".${system} = {"] ++ entries ++ ["      };"]
 
 def renderPackageEntry (package : Package system) : String :=
-  "        " ++ package.name ++ " = " ++ package.builder ++ ";"
+  "        " ++ package.name ++ " = " ++ renderBuildExpr package.build ++ ";"
 
 def renderPackageDefaults (packages : List (Package system)) : List String :=
   match packages with
   | [] => []
   | package :: _ =>
-      ["        default = " ++ package.builder ++ ";"]
+      ["        default = " ++ renderBuildExpr package.build ++ ";"]
 
 def renderAppLine (system : System) (packages : List (Package system)) (app : App system) :
     Except String String := do
@@ -47,7 +79,7 @@ def renderAppLine (system : System) (packages : List (Package system)) (app : Ap
   | none => throw s!"app {app.name} refers to missing package {app.packageName}"
   | some package =>
       pure <| "        " ++ app.name ++
-        " = { type = \"app\"; program = \"${" ++ package.builder ++ "}/" ++
+        " = { type = \"app\"; program = \"${" ++ renderBuildExpr package.build ++ "}/" ++
         app.program ++ "\"; };"
 
 def renderAppDefaults (apps : List (App system)) : List String :=
@@ -61,7 +93,7 @@ def renderShellLine (system : System) (packages : List (Package system)) (shell 
   let packageExprs ← shell.packageNames.mapM fun packageName =>
     match findPackage? packages packageName with
     | none => throw s!"devShell {shell.name} refers to missing package {packageName}"
-    | some package => pure package.builder
+    | some package => pure (renderBuildExprListItem package.build)
   pure <| "        " ++ shell.name ++
     " = pkgs.mkShell { packages = [ " ++ joinWith " " packageExprs ++ " ]; };"
 
@@ -72,7 +104,7 @@ def renderCheckLine (system : System) (packages : List (Package system)) (check 
   | some package =>
       pure <| "        " ++ check.name ++
         " = pkgs.runCommand \"" ++ check.name ++
-        "-check\" { nativeBuildInputs = [ " ++ package.builder ++
+        "-check\" { nativeBuildInputs = [ " ++ renderBuildExprListItem package.build ++
         " ]; } ''\n          " ++ check.command ++ "\n        '';"
 
 def renderOutputsForSystem (flake : Flake) (system : System) : Except String (List String) := do
@@ -99,6 +131,7 @@ def renderFlake (flake : Flake) : Except String String := do
     | _ => throw "the PoC renderer currently supports exactly one active system"
   let inputLines ← flake.inputs.mapM renderInputLine
   let outputLines ← renderOutputsForSystem flake system
+  let outputArgs := ["self"] ++ flake.inputs.map (fun input => renderOutputArg input.fst)
   pure <| joinWith "\n" (
     [
       "{",
@@ -110,7 +143,7 @@ def renderFlake (flake : Flake) : Except String String := do
     [
       "  };",
       "",
-      "  outputs = { self, nixpkgs }:",
+      "  outputs = { " ++ joinWith ", " outputArgs ++ " }:",
       "    let",
       s!"      system = {renderString system.toNixString};",
       "      pkgs = import nixpkgs { inherit system; };",

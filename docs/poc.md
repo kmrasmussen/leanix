@@ -46,3 +46,12 @@ of truth. The source of truth is the typed Lean value.
 
 The `path:` prefix matters inside the `leanix` Git repo because `generated/` is
 an ignored artifact directory, not the source of truth.
+
+For self-checking generated flakes, pass an absolute source URL such as
+`path:/home/kasper/projects/leanix`. A relative parent like `path:..` does not
+survive Nix's flake copying semantics when the generated flake itself is the
+flake root.
+
+The e2e harness belongs in Rust. Lean should render and validate typed graphs;
+Rust should run `lake`, call `nix flake check`, manage generated paths, and
+eventually handle snapshots, caches, lockfiles, and corpus-style tests.
