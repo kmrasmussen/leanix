@@ -170,8 +170,12 @@ def helloCliProject : CliProject .x86_64_linux where
   devShell := helloDevShell
   check := { helloCheck with name := "default" }
 
+def helloCliValidatedSchema : Except String (ValidatedSchema (CliProject .x86_64_linux)) :=
+  ValidatedSchema.validate helloCliProject
+
 def helloCliSchemaFlake : Except String Flake :=
-  Flake.fromSchema "Leanix typed CLI schema example" [("nixpkgs", nixpkgsInput)] helloCliProject
+  helloCliValidatedSchema.map fun validated =>
+    Flake.fromValidatedSchema "Leanix typed CLI schema example" [("nixpkgs", nixpkgsInput)] validated
 
 def brokenCliProject : CliProject .x86_64_linux where
   package := helloPackage

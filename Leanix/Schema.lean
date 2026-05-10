@@ -12,6 +12,18 @@ def schemaOutputs [FlakeSchema schema] (value : schema) : Outputs :=
 def validateSchema [FlakeSchema schema] (value : schema) : Except String Unit :=
   FlakeSchema.validate value
 
+structure ValidatedSchema (schema : Type) where
+  value : schema
+
+def ValidatedSchema.validate [FlakeSchema schema] (value : schema) :
+    Except String (ValidatedSchema schema) := do
+  validateSchema value
+  pure { value := value }
+
+def ValidatedSchema.outputs [FlakeSchema schema] (validated : ValidatedSchema schema) :
+    Outputs :=
+  schemaOutputs validated.value
+
 structure CliProject (system : System) where
   package : Package system
   app : App system
@@ -112,13 +124,20 @@ instance : FlakeSchema (CliProject system) where
   toOutputs := CliProject.toOutputs
   validate := CliProject.validate
 
+def Flake.fromValidatedSchema [FlakeSchema schema] (description : String)
+    (inputs : List (String × Input)) (validated : ValidatedSchema schema) : Flake := {
+  description := description
+  inputs := inputs
+  outputs := validated.outputs
+}
+
 def Flake.fromSchema [FlakeSchema schema] (description : String) (inputs : List (String × Input))
     (value : schema) : Except String Flake := do
-  validateSchema value
+  let validated ← ValidatedSchema.validate value
   pure {
     description := description
     inputs := inputs
-    outputs := schemaOutputs value
+    outputs := validated.outputs
   }
 
 end Leanix

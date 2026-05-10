@@ -19,6 +19,10 @@ Leanix also has its first typed output schema. `CliProject` lowers a typed
 package/app/dev shell/check contract to ordinary flake outputs after validating
 that the conventional defaults point at the project package.
 
+Schema validation now has an explicit type boundary. Raw schemas become
+`ValidatedSchema` values before they can be lowered through the validated-schema
+API.
+
 ## Initial Hypothesis
 
 A typed flake should make these things structural instead of conventional:

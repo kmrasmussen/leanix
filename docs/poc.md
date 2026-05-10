@@ -65,3 +65,7 @@ The first schema invariant is `CliProject`: one package, default app, default
 dev shell, and default check. The schema validates this typed contract and then
 lowers it to ordinary flake `Outputs`, where graph validation and rendering
 continue as before.
+
+The schema boundary is explicit: raw schema values pass through
+`ValidatedSchema.validate`, and downstream code can require `ValidatedSchema`
+instead of accepting unchecked schema data.
