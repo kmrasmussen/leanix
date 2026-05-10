@@ -1,5 +1,6 @@
 import Leanix.Core
 import Leanix.Schema
+import Leanix.Validate
 
 namespace Leanix
 namespace ProofCarryingCliClosure
@@ -11,12 +12,10 @@ def helloToolPackage : Package .x86_64_linux where
 def helloWrapperPackage : Package .x86_64_linux where
   name := "helloWrapper"
   build := .runSteps "hello-wrapper" [.package "helloTool"] [
-    .mkdir "$out/bin",
-    .writeFile "$out/bin/hello-wrapper" (
+    .installExecutableScript "$out/bin/hello-wrapper" (
       "#!/bin/sh\n" ++
       "${self.packages.${system}.helloTool}/bin/hello --version"
-    ),
-    .chmodExecutable "$out/bin/hello-wrapper"
+    )
   ]
 
 def showcaseCliProject : CliProject .x86_64_linux where
@@ -37,8 +36,15 @@ def showcaseCliProject : CliProject .x86_64_linux where
     command := "hello-wrapper > \"$out\""
   }
 
-def showcaseValidatedSchema : Except String (ValidatedSchema (CliProject .x86_64_linux)) :=
+def showcaseValidatedSchema : Except SchemaError (ValidatedSchema (CliProject .x86_64_linux)) :=
   CliProject.validateChecked showcaseCliProject
+
+def checkedPackageGraph : CheckedPackageGraph .x86_64_linux where
+  packages := [helloWrapperPackage, helloToolPackage]
+  valid := {
+    refsResolve := by native_decide
+    acyclicByFuel := by native_decide
+  }
 
 end ProofCarryingCliClosure
 end Leanix

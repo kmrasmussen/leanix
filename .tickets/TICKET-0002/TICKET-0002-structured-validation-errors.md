@@ -21,3 +21,10 @@ Replace string validation failures with structured Lean error types.
 1. Missing package references and package cycles have distinct error variants.
 2. CLI output remains readable.
 3. Rust e2e validates at least two exact error classes.
+
+## Progress
+- Added `ValidateError` for graph validation failures.
+- Added `SchemaError` for `CliProject` schema validation failures.
+- Kept CLI messages human-readable through `ToString` renderers.
+- Updated the Rust e2e harness to compare exact stderr for missing package,
+  package cycle, and invalid CLI schema cases.

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Caching decision: the first CI version relies on the default GitHub
+      # runner cache state and public Nix substituters only. Leanix should add a
+      # project binary cache later, after the cache trust model is explicit.
+      - name: Check root flake
+        run: nix flake check
+
+      - name: Run Rust e2e harness
+        run: nix develop -c cargo run --locked --manifest-path e2e/runner/Cargo.toml
+

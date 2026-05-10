@@ -21,3 +21,10 @@ Make source provenance and trust boundaries explicit in the typed model.
 1. Fetch-like source inputs cannot be rendered without a hash.
 2. Local source inputs are clearly marked as development-only or impure.
 3. At least one Rust e2e case covers source validation behavior.
+
+## Progress
+- Split local inputs into `Input.localDevSource` and `Input.impureLocalSource`.
+- Kept lockfile-backed flake inputs as `Input.flake`.
+- Render hashed fixed-output `Input.source` values as `builtins.fetchTree`
+  bindings.
+- Added a Rust e2e invalid case for an unhashed source input.

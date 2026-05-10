@@ -1,0 +1,50 @@
+import Leanix.Core
+
+namespace Leanix
+
+inductive ValidateError where
+  | duplicateInputNames
+  | duplicateOutputNames : (system : System) -> (family : String) -> ValidateError
+  | missingInputRef : (name : String) -> ValidateError
+  | missingPackageRef : (system : System) -> (owner : String) -> (packageName : String) -> ValidateError
+  | packageCycle : (system : System) -> (packageName : String) -> (throughPackage : String) -> ValidateError
+  | sourceInputMissingHash : (name : String) -> ValidateError
+  deriving Repr, BEq
+
+def ValidateError.toString : ValidateError -> String
+  | .duplicateInputNames => "duplicate input names"
+  | .duplicateOutputNames system family =>
+      s!"duplicate {family} names for {system.toNixString}"
+  | .missingInputRef name =>
+      s!"build expression refers to missing input {name}"
+  | .missingPackageRef system owner packageName =>
+      s!"{owner} for {system.toNixString} refers to missing package {packageName}"
+  | .packageCycle system packageName throughPackage =>
+      s!"package dependency cycle for {system.toNixString}: {packageName} reaches itself through {throughPackage}"
+  | .sourceInputMissingHash name =>
+      s!"source input {name} must have a narHash"
+
+instance : ToString ValidateError where
+  toString := ValidateError.toString
+
+inductive SchemaError where
+  | cliProjectAppNotDefault
+  | cliProjectDevShellNotDefault
+  | cliProjectCheckNotDefault
+  | cliProjectAppMissingPackage
+  | cliProjectCheckMissingPackage
+  | cliProjectDevShellMissingPackage
+  deriving Repr, BEq
+
+def SchemaError.toString : SchemaError -> String
+  | .cliProjectAppNotDefault => "CliProject app output must be named default"
+  | .cliProjectDevShellNotDefault => "CliProject devShell output must be named default"
+  | .cliProjectCheckNotDefault => "CliProject check output must be named default"
+  | .cliProjectAppMissingPackage => "CliProject app must point at the project package"
+  | .cliProjectCheckMissingPackage => "CliProject check must point at the project package"
+  | .cliProjectDevShellMissingPackage => "CliProject devShell must include the project package"
+
+instance : ToString SchemaError where
+  toString := SchemaError.toString
+
+end Leanix

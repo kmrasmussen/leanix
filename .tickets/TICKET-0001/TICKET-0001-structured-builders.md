@@ -28,4 +28,8 @@ semantically.
 ## Progress
 - Added `BuildStep` and `BuildExpr.runSteps`.
 - Migrated the closure example's executable wrapper to structured steps.
-- Raw `runCommand` remains for self-build and check commands.
+- Added structured steps for copying sources, installing executable scripts,
+  building Lean projects, and explicit raw command escape hatches.
+- Migrated the self-build to structured source copy and Lean build steps.
+- Raw `runCommand`, `BuildStep.run`, and `Check.command` remain documented
+  escape hatches.

@@ -1,16 +1,16 @@
-import Leanix.Core
+import Leanix.Validate
 
 namespace Leanix
 
 class FlakeSchema (schema : Type) where
   toOutputs : schema -> Outputs
-  validate : schema -> Except String Unit
+  validate : schema -> Except SchemaError Unit
   Valid : schema -> Prop
 
 def schemaOutputs [FlakeSchema schema] (value : schema) : Outputs :=
   FlakeSchema.toOutputs value
 
-def validateSchema [FlakeSchema schema] (value : schema) : Except String Unit :=
+def validateSchema [FlakeSchema schema] (value : schema) : Except SchemaError Unit :=
   FlakeSchema.validate value
 
 structure ValidatedSchema (schema : Type) [FlakeSchema schema] where
@@ -37,36 +37,43 @@ structure CliProject.Valid (project : CliProject system) : Prop where
   checkPointsAtPackage : project.check.packageName = project.package.name
   devShellContainsPackage : project.devShell.packageNames.contains project.package.name = true
 
-def CliProject.validate (project : CliProject system) : Except String Unit := do
-  if project.app.name != "default" then
-    throw "CliProject app output must be named default"
-  else
-    pure ()
+structure CliProject.ValidEvidence (project : CliProject system) : Type where
+  valid : CliProject.Valid project
 
-  if project.devShell.name != "default" then
-    throw "CliProject devShell output must be named default"
+def CliProject.validateEvidence (project : CliProject system) :
+    Except SchemaError (CliProject.ValidEvidence project) := do
+  if hAppDefault : project.app.name = "default" then
+    if hDevShellDefault : project.devShell.name = "default" then
+      if hCheckDefault : project.check.name = "default" then
+        if hAppPoints : project.app.packageName = project.package.name then
+          if hCheckPoints : project.check.packageName = project.package.name then
+            if hDevShellContains : project.devShell.packageNames.contains project.package.name = true then
+              pure {
+                valid := {
+                  appIsDefault := hAppDefault
+                  devShellIsDefault := hDevShellDefault
+                  checkIsDefault := hCheckDefault
+                  appPointsAtPackage := hAppPoints
+                  checkPointsAtPackage := hCheckPoints
+                  devShellContainsPackage := hDevShellContains
+                }
+              }
+            else
+              throw .cliProjectDevShellMissingPackage
+          else
+            throw .cliProjectCheckMissingPackage
+        else
+          throw .cliProjectAppMissingPackage
+      else
+        throw .cliProjectCheckNotDefault
+    else
+      throw .cliProjectDevShellNotDefault
   else
-    pure ()
+    throw .cliProjectAppNotDefault
 
-  if project.check.name != "default" then
-    throw "CliProject check output must be named default"
-  else
-    pure ()
-
-  if project.app.packageName != project.package.name then
-    throw "CliProject app must point at the project package"
-  else
-    pure ()
-
-  if project.check.packageName != project.package.name then
-    throw "CliProject check must point at the project package"
-  else
-    pure ()
-
-  if !(project.devShell.packageNames.contains project.package.name) then
-    throw "CliProject devShell must include the project package"
-  else
-    pure ()
+def CliProject.validate (project : CliProject system) : Except SchemaError Unit := do
+  let _ ← CliProject.validateEvidence project
+  pure ()
 
 def CliProject.toOutputs : {system : System} -> CliProject system -> Outputs
   | .x86_64_linux, project => {
@@ -132,51 +139,37 @@ instance : FlakeSchema (CliProject system) where
   Valid := CliProject.Valid
 
 def CliProject.validateChecked (project : CliProject system) :
-    Except String (ValidatedSchema (CliProject system)) := do
-  if hAppDefault : project.app.name = "default" then
-    if hDevShellDefault : project.devShell.name = "default" then
-      if hCheckDefault : project.check.name = "default" then
-        if hAppPoints : project.app.packageName = project.package.name then
-          if hCheckPoints : project.check.packageName = project.package.name then
-            if hDevShellContains : project.devShell.packageNames.contains project.package.name = true then
-              pure {
-                value := project
-                valid := {
-                  appIsDefault := hAppDefault
-                  devShellIsDefault := hDevShellDefault
-                  checkIsDefault := hCheckDefault
-                  appPointsAtPackage := hAppPoints
-                  checkPointsAtPackage := hCheckPoints
-                  devShellContainsPackage := hDevShellContains
-                }
-              }
-            else
-              throw "CliProject devShell must include the project package"
-          else
-            throw "CliProject check must point at the project package"
-        else
-          throw "CliProject app must point at the project package"
-      else
-        throw "CliProject check output must be named default"
-    else
-      throw "CliProject devShell output must be named default"
-  else
-    throw "CliProject app output must be named default"
+    Except SchemaError (ValidatedSchema (CliProject system)) := do
+  let evidence ← CliProject.validateEvidence project
+  pure {
+    value := project
+    valid := evidence.valid
+  }
 
 def Flake.fromValidatedSchema [FlakeSchema schema] (description : String)
-    (inputs : List (String × Input)) (validated : ValidatedSchema schema) : Flake := {
-  description := description
-  inputs := inputs
-  outputs := validated.outputs
-}
-
-def Flake.fromSchema [FlakeSchema schema] (description : String) (inputs : List (String × Input))
-    (value : schema) : Except String Flake := do
-  validateSchema value
-  pure {
+    (inputs : List (String × Input)) (validated : ValidatedSchema schema) :
+    Except ValidateError ValidatedFlake := do
+  let validatedFlake ← Flake.validateChecked {
     description := description
     inputs := inputs
-    outputs := schemaOutputs value
+    outputs := validated.outputs
   }
+  pure {
+    validatedFlake with
+    carriedInvariants := "FlakeSchema.Valid" :: validatedFlake.carriedInvariants
+  }
+
+def Flake.fromSchema [FlakeSchema schema] (description : String) (inputs : List (String × Input))
+    (value : schema) : Except String ValidatedFlake := do
+  match validateSchema value with
+  | .ok _ =>
+      match Flake.validateChecked {
+        description := description
+        inputs := inputs
+        outputs := schemaOutputs value
+      } with
+      | .ok validatedFlake => pure validatedFlake
+      | .error error => throw error.toString
+  | .error error => throw error.toString
 
 end Leanix

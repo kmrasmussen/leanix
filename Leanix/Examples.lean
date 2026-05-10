@@ -1,4 +1,5 @@
 import Leanix.Schema
+import Leanix.Validate
 
 namespace Leanix
 namespace Examples
@@ -46,18 +47,15 @@ def helloFlake : Flake where
   outputs := helloOutputs
 
 def leanixSource (url : String) : Input :=
-  .localSource url
-
-def leanixBuildScript : String :=
-  "cp -R ${leanixSrc} source\n" ++
-  "chmod -R u+w source\n" ++
-  "cd source\n" ++
-  "lake build\n" ++
-  "touch \"$out\""
+  .localDevSource url
 
 def leanixPackage : Package .x86_64_linux where
   name := "leanix"
-  build := .runCommand "leanix-build" [.nixpkgs "lean4"] leanixBuildScript
+  build := .runSteps "leanix-build" [.nixpkgs "lean4"] [
+    .copySource (.inputPath "leanixSrc") "source",
+    .buildLeanProject "source",
+    .run "touch \"$out\""
+  ]
 
 def leanixDevShell : DevShell .x86_64_linux where
   name := "default"
@@ -91,6 +89,19 @@ def selfFlakeWithSource (sourceUrl : String) : Flake where
 def selfFlake : Flake :=
   selfFlakeWithSource "path:.."
 
+def unhashedSourceInput : Input :=
+  .source {
+    url := "https://example.com/leanix-source.tar.gz"
+  }
+
+def unhashedSourceFlake : Flake where
+  description := "Leanix invalid unhashed source example"
+  inputs := [
+    ("nixpkgs", nixpkgsInput),
+    ("unhashedSrc", unhashedSourceInput)
+  ]
+  outputs := helloOutputs
+
 def helloToolPackage : Package .x86_64_linux where
   name := "helloTool"
   build := .nixpkgs "hello"
@@ -98,12 +109,10 @@ def helloToolPackage : Package .x86_64_linux where
 def helloWrapperPackage : Package .x86_64_linux where
   name := "helloWrapper"
   build := .runSteps "hello-wrapper" [.package "helloTool"] [
-    .mkdir "$out/bin",
-    .writeFile "$out/bin/hello-wrapper" (
+    .installExecutableScript "$out/bin/hello-wrapper" (
       "#!/bin/sh\n" ++
       "${self.packages.${system}.helloTool}/bin/hello --version"
-    ),
-    .chmodExecutable "$out/bin/hello-wrapper"
+    )
   ]
 
 def closureCheck : Check .x86_64_linux where
@@ -125,6 +134,13 @@ def closureFlake : Flake where
   description := "Leanix typed closure example"
   inputs := [("nixpkgs", nixpkgsInput)]
   outputs := closureOutputs
+
+def closureCheckedPackageGraph : CheckedPackageGraph .x86_64_linux where
+  packages := [helloToolPackage, helloWrapperPackage]
+  valid := {
+    refsResolve := by native_decide
+    acyclicByFuel := by native_decide
+  }
 
 def missingRefPackage : Package .x86_64_linux where
   name := "broken"
@@ -164,18 +180,83 @@ def cycleFlake : Flake where
   inputs := [("nixpkgs", nixpkgsInput)]
   outputs := cycleOutputs
 
+def escapingPackageName : String :=
+  "escape\"pkg\\''"
+
+def escapingPackage : Package .x86_64_linux where
+  name := escapingPackageName
+  build := .runSteps "escape\"builder\\''" [] [
+    .mkdir "$out/bin",
+    .writeFile "$out/bin/escape-check" (
+      "#!/bin/sh\n" ++
+      "cat <<'END'\n" ++
+      "literal '' in generated content\n" ++
+      "EOF\n" ++
+      "quote \" and slash \\\n" ++
+      "END\n"
+    ),
+    .chmodExecutable "$out/bin/escape-check"
+  ]
+
+def escapingCheck : Check .x86_64_linux where
+  name := "escape\"check\\''"
+  packageName := escapingPackageName
+  command := "escape-check > \"$out\""
+
+def escapingOutputs : Outputs where
+  packages
+    | .x86_64_linux => [escapingPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks
+    | .x86_64_linux => [escapingCheck]
+    | _ => []
+
+def escapingFlake : Flake where
+  description := "Leanix renderer escaping example \" \\ ''"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := escapingOutputs
+
+def multiLinuxPackage : Package .x86_64_linux where
+  name := "hello"
+  build := .nixpkgs "hello"
+
+def multiAarch64Package : Package .aarch64_linux where
+  name := "hello"
+  build := .nixpkgs "hello"
+
+def multiSystemOutputs : Outputs where
+  packages
+    | .x86_64_linux => [multiLinuxPackage]
+    | .aarch64_linux => [multiAarch64Package]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks := fun _ => []
+
+def multiSystemFlake : Flake where
+  description := "Leanix multi-system renderer example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := multiSystemOutputs
+
 def helloCliProject : CliProject .x86_64_linux where
   package := helloPackage
   app := { helloApp with name := "default" }
   devShell := helloDevShell
   check := { helloCheck with name := "default" }
 
-def helloCliValidatedSchema : Except String (ValidatedSchema (CliProject .x86_64_linux)) :=
+def helloCliValidatedSchema : Except SchemaError (ValidatedSchema (CliProject .x86_64_linux)) :=
   CliProject.validateChecked helloCliProject
 
-def helloCliSchemaFlake : Except String Flake :=
-  helloCliValidatedSchema.map fun validated =>
-    Flake.fromValidatedSchema "Leanix typed CLI schema example" [("nixpkgs", nixpkgsInput)] validated
+def helloCliSchemaFlake : Except String ValidatedFlake := do
+  let validated ←
+    match helloCliValidatedSchema with
+    | .ok validated => pure validated
+    | .error error => throw error.toString
+  match Flake.fromValidatedSchema "Leanix typed CLI schema example" [("nixpkgs", nixpkgsInput)] validated with
+  | .ok validatedFlake => pure validatedFlake
+  | .error error => throw error.toString
 
 def brokenCliProject : CliProject .x86_64_linux where
   package := helloPackage
@@ -183,7 +264,7 @@ def brokenCliProject : CliProject .x86_64_linux where
   devShell := helloDevShell
   check := { helloCheck with name := "default" }
 
-def brokenCliSchemaFlake : Except String Flake :=
+def brokenCliSchemaFlake : Except String ValidatedFlake :=
   Flake.fromSchema "Leanix invalid CLI schema example" [("nixpkgs", nixpkgsInput)] brokenCliProject
 
 def showcaseCliProject : CliProject .x86_64_linux where
@@ -204,12 +285,17 @@ def showcaseCliProject : CliProject .x86_64_linux where
     command := "hello-wrapper > \"$out\""
   }
 
-def showcaseValidatedSchema : Except String (ValidatedSchema (CliProject .x86_64_linux)) :=
+def showcaseValidatedSchema : Except SchemaError (ValidatedSchema (CliProject .x86_64_linux)) :=
   CliProject.validateChecked showcaseCliProject
 
-def showcaseFlake : Except String Flake :=
-  showcaseValidatedSchema.map fun validated =>
-    Flake.fromValidatedSchema "Leanix proof-carrying CLI closure showcase" [("nixpkgs", nixpkgsInput)] validated
+def showcaseFlake : Except String ValidatedFlake := do
+  let validated ←
+    match showcaseValidatedSchema with
+    | .ok validated => pure validated
+    | .error error => throw error.toString
+  match Flake.fromValidatedSchema "Leanix proof-carrying CLI closure showcase" [("nixpkgs", nixpkgsInput)] validated with
+  | .ok validatedFlake => pure validatedFlake
+  | .error error => throw error.toString
 
 end Examples
 end Leanix

@@ -40,16 +40,11 @@ structure SourcePin where
 inductive Input where
   | flake : SourcePin -> Input
   | source : SourcePin -> Input
-  | localSource : String -> Input
+  | localDevSource : String -> Input
+  | impureLocalSource : String -> Input
   deriving Repr, BEq
 
-inductive BuildStep where
-  | mkdir : String -> BuildStep
-  | writeFile : (path : String) -> (content : String) -> BuildStep
-  | chmodExecutable : String -> BuildStep
-  | run : String -> BuildStep
-  deriving Repr, BEq
-
+mutual
 inductive BuildExpr where
   | nixpkgs : String -> BuildExpr
   | inputPath : String -> BuildExpr
@@ -57,6 +52,17 @@ inductive BuildExpr where
   | runCommand : (name : String) -> (nativeBuildInputs : List BuildExpr) -> (script : String) -> BuildExpr
   | runSteps : (name : String) -> (nativeBuildInputs : List BuildExpr) -> (steps : List BuildStep) -> BuildExpr
   deriving Repr, BEq
+
+inductive BuildStep where
+  | copySource : (source : BuildExpr) -> (destination : String) -> BuildStep
+  | installExecutableScript : (path : String) -> (content : String) -> BuildStep
+  | buildLeanProject : (directory : String) -> BuildStep
+  | mkdir : String -> BuildStep
+  | writeFile : (path : String) -> (content : String) -> BuildStep
+  | chmodExecutable : String -> BuildStep
+  | run : String -> BuildStep
+  deriving Repr, BEq
+end
 
 structure EnvVar where
   name : String

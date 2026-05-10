@@ -9,7 +9,9 @@ It demonstrates:
 - proof fields for the CLI schema contract
 - an extra package dependency in the schema output
 - package closure validation before rendering
-- a structured `runSteps` builder for an executable wrapper
+- a structured `runSteps` builder that installs an executable wrapper script
+- a `CheckedPackageGraph` proof witness for package reference closure and the
+  finite acyclicity check
 - rendering to an ordinary `flake.nix`
 - checking the generated flake with Nix through the Rust e2e harness
 
@@ -34,6 +36,13 @@ Or run the full e2e harness:
 nix develop -c cargo run --locked --manifest-path e2e/runner/Cargo.toml
 ```
 
+To emit the proof-carrying artifact directly:
+
+```sh
+nix develop -c lake exe leanix emit-artifact --out generated/showcase-artifact
+nix flake check path:./generated/showcase-artifact
+```
+
 ## Source
 
 The local excerpt is:
@@ -52,6 +61,12 @@ The expected rendered Nix is:
 
 ```text
 examples/proof-carrying-cli-closure/expected.flake.nix
+```
+
+The expected proof-carrying artifact files are:
+
+```text
+examples/proof-carrying-cli-closure/artifact/
 ```
 
 The generated flake is an artifact. The source of truth is the Lean value.

@@ -83,3 +83,12 @@ That first slice should not attempt cryptographic proof objects. The point is
 to establish the artifact boundary and make later proofs and provenance checks
 have a real home.
 
+## Progress
+- Added `ArtifactManifest` and JSON rendering for the showcase artifact.
+- Added `emit-artifact --out DIR` and `emit-showcase-artifact --out DIR`.
+- Committed expected showcase artifact files under
+  `examples/proof-carrying-cli-closure/artifact/`.
+- Extended the Rust e2e harness to read the manifest, verify declared files,
+  assert manifest packages appear in `flake.nix`, assert app/check package
+  references resolve to manifest packages, and run `nix flake check` on the
+  artifact directory.

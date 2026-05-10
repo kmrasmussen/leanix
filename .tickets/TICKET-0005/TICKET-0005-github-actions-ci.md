@@ -21,3 +21,11 @@ Add CI for Leanix's current contract.
 1. GitHub Actions runs on push and pull request.
 2. CI executes root `nix flake check`.
 3. CI executes the Rust e2e harness.
+
+## Progress
+- Added `.github/workflows/ci.yml`.
+- CI runs on `push` and `pull_request`.
+- CI installs Nix, runs `nix flake check`, then runs the Rust e2e harness under
+  `nix develop`.
+- First caching decision is intentionally simple: use public Nix substituters
+  and no project binary cache until Leanix has an explicit cache trust model.

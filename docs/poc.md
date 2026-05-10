@@ -2,74 +2,222 @@
 
 ## Goal
 
-Build one tiny end-to-end path:
+The original PoC target was one tiny end-to-end path:
 
 ```text
 Lean value -> validation -> generated flake.nix -> nix build/check
 ```
 
-The project should not start by reimplementing Nix. It should start by proving
-that Lean can be a useful typed front end for one small flake-shaped build graph.
+That path now exists. This document describes the shape of the PoC as built,
+what each piece does, and which invariants are checked.
 
 ## Shape
 
-The first example should define:
+The smallest example, `helloFlake` (`Leanix/Examples.lean`), defines:
 
-- one supported system, probably `x86_64-linux`
-- one package, such as `hello`
-- one app that points at that package
-- one development shell containing that package
-- one check that runs a command against the package
+- one supported system, `x86_64-linux`
+- one package, `hello`, built from `pkgs.hello`
+- one app named `hello` pointing at the `hello` package
+- one development shell named `default` containing the `hello` package
+- one check named `hello` that runs `hello --version` against the package
 
-The model should validate:
+Two more elaborate examples build on the same model:
 
-- package, app, shell, and check outputs are attached to supported systems
-- an app cannot point at a package for another system
-- source-like inputs have hashes when required
-- output names are unique inside each output family
+- `closureFlake` adds a typed package closure: `helloWrapper` references
+  `helloTool` through `BuildExpr.package` and is rendered with the structured
+  `runSteps` builder.
+- `showcaseCliProject` packages the closure example as a `CliProject` schema,
+  takes it through `CliProject.validateChecked` to get a proof-carrying
+  `ValidatedSchema`, and then lowers to a `ValidatedFlake`. This is the current
+  showcase under `examples/proof-carrying-cli-closure/`.
+
+There is also a `selfFlakeWithSource` example: the CLI renders a flake that
+imports the Leanix repository as a `localDevSource` input, copies it with a
+structured build step, and runs a structured Lean-project build inside
+`nix flake check`. The Rust e2e harness uses this to self-check.
+
+## Validation
+
+`Leanix/Validate.lean` and `Leanix/Schema.lean` together check:
+
+- input names are unique
+- `Input.source` pins must carry a `narHash`
+- per-system: package, app, dev-shell, and check names are each unique within
+  their family
+- every `BuildExpr.inputPath` references a declared flake input
+- every `BuildExpr.package`, app `packageName`, dev-shell entry, and check
+  `packageName` references an existing package for that system
+- package references are acyclic (fuel-bounded reachability)
+- for `CliProject`: app/dev-shell/check are named `default`; app and check
+  point at the project package; the dev shell contains the project package.
+  These are recorded as proof fields on `ValidatedSchema (CliProject system)`.
+
+Graph validation reports `ValidateError` values, and schema validation reports
+`SchemaError` values. The CLI renders those values to plain text for humans,
+while the Rust e2e harness asserts exact error output for representative graph
+and schema failures.
+
+Package closure also has a checked boundary. `CheckedPackageGraph system`
+carries a package list plus `PackageClosure.Valid` evidence:
+
+- package references in build expressions resolve to packages in the same
+  graph
+- package dependency cycles are absent according to the same finite
+  `packages.length + 1` reachability check used by validation
+
+This is not a proof of Nix evaluation behavior. It is proof data for the
+Leanix graph assumptions the renderer relies on before emitting package
+entries.
 
 ## Renderer
 
-After validation, Leanix should render the restricted graph to a generated
-`flake.nix`. The renderer can be intentionally tiny and only support the first
-example.
+`Leanix/Render.lean` lowers a `ValidatedFlake` to a generated `flake.nix`.
+The renderer no longer re-runs graph validation internally; raw `Flake` values
+must pass through `Flake.validateChecked` first. It renders inputs, package
+builders, apps, dev shells, and checks, plus a synthetic `default` package and
+`default` app when none is declared.
 
-The generated file should be treated as an interop artifact, not as the source
-of truth. The source of truth is the typed Lean value.
+The renderer emits one output block per active system. Each block binds its own
+`system` and `pkgs`, so package references such as
+`self.packages.${system}."hello"` stay system-local. Synthetic default packages
+are aliases to the first named package, matching the default-app shape instead
+of duplicating the package builder.
 
-## Success Criteria
+Lockfile-backed `Input.flake` and local source inputs render as flake inputs.
+Fixed-output `Input.source` values render as `builtins.fetchTree` bindings and
+are excluded from the flake output argument set.
 
-- `lake build` succeeds
-- `lake exe leanix render-example --out generated/flake.nix` writes a flake
-- `nix flake check path:./generated` succeeds
-- the example remains small enough to understand in one sitting
+The internal build-expression renderer still uses a finite depth guard, but
+exhaustion is now a Lean-side `Except` error. It no longer emits a latent
+`throw "Leanix render depth exceeded"` expression into generated Nix.
 
-The `path:` prefix matters inside the `leanix` Git repo because `generated/` is
-an ignored artifact directory, not the source of truth.
+Local source inputs are not reproducibility claims. `Input.localDevSource`
+marks the normal development/self-check path; `Input.impureLocalSource` is
+reserved for inputs that are explicitly outside the fixed-output trust model.
+
+String-like Nix literals go through `escapeNixString` before rendering.
+Attribute names are emitted as quoted Nix attribute names so package, app,
+shell, and check names do not need to be identifier-shaped. Raw indented script
+bodies escape Nix's `''` terminator and `${` interpolation marker. Structured
+`writeFile` no longer uses shell heredocs; it renders through `pkgs.writeText`,
+so lines such as `EOF` are just content. `installExecutableScript` also uses
+`pkgs.writeText`, but intentionally allows Nix interpolation in its content so
+typed package references can still be baked into wrapper scripts.
+
+The generated file is treated as an interop artifact, not the source of truth.
+The source of truth is the typed Lean value.
+
+## Proof-Carrying Artifact
+
+`leanix emit-artifact --out DIR` emits the first proof-carrying showcase
+artifact. The directory contains:
+
+- `flake.nix`, the Nix backend artifact
+- `leanix.manifest.json`, a machine-readable manifest
+
+The manifest records the renderer version, source reference, generated files,
+systems, inputs and source trust classes, packages, app/check package
+references, checked invariant names, and replay commands.
+
+The current artifact is proof-carrying in a deliberately narrow sense. Lean
+checks schema invariants, package closure, finite acyclicity, source trust
+requirements, and graph validation before emitting the artifact. The checked
+flake carries the validation witness to the render boundary. Rust replays the
+artifact contract by reading the manifest, checking that files exist, checking
+package/reference declarations against `flake.nix`, and running the replay
+commands it owns. Nix remains the external witness for evaluating and building
+the rendered flake; Leanix does not claim to prove Nix evaluation.
+
+## Builder Boundary
+
+`BuildExpr.runSteps` is the current structured builder surface. It owns common
+operations that Leanix wants to reason about semantically:
+
+- copying a source expression into the build directory
+- installing an executable script
+- building a Lean project with `lake build`
+- simple filesystem operations such as `mkdir`, `writeFile`, and `chmod +x`
+
+Raw shell remains as an explicit escape hatch in three places:
+
+- `BuildExpr.runCommand`, for derivations that have not moved to structured
+  steps yet
+- `BuildStep.run`, for a single command inside an otherwise structured step
+  list
+- `Check.command`, because checks are still modeled as command strings
+
+Those escape hatches are part of the prototype boundary, not the desired long
+term source of build semantics.
+
+## CLI
+
+`lake exe leanix` exposes the PoC commands (`Main.lean`):
+
+- `leanix` — banner
+- `leanix render-example --out FILE` — typed `hello`
+- `leanix render-closure --out FILE` — typed package closure
+- `leanix render-cli-schema --out FILE` — `CliProject` lowered to a flake
+- `leanix render-showcase --out FILE` — proof-carrying CLI closure showcase
+- `leanix render-multi-system --out FILE` — two active systems
+- `leanix render-self --source URL --out FILE` — the self-check flake
+- `leanix emit-artifact --out DIR` — proof-carrying showcase artifact
+- `leanix emit-showcase-artifact --out DIR` — explicit showcase artifact alias
+- `leanix render-invalid-cli-schema --out FILE`
+- `leanix render-invalid-missing-ref --out FILE`
+- `leanix render-invalid-cycle --out FILE`
+- `leanix render-invalid-source-missing-hash --out FILE`
+
+The `render-invalid-*` targets are negative tests: the Rust harness
+asserts they exit non-zero.
+
+## Rust E2E Harness
+
+`e2e/runner/src/main.rs` (no external crates) drives the full PoC loop:
+
+1. For each valid case: invoke `lake exe leanix render-... --out
+   generated/flake.nix`; for selected renderer cases, compare against
+   `e2e/golden/*.flake.nix`; then run `nix flake check path:./generated`.
+   The showcase also golden-compares against
+   `examples/proof-carrying-cli-closure/expected.flake.nix`. The
+   `render-multi-system` case pins a flake with both `x86_64-linux` and
+   `aarch64-linux` package outputs.
+2. For each invalid case: invoke `lake exe leanix`, assert non-zero exit, and
+   compare exact stderr for the expected error class.
+3. For the showcase only: also `lake env lean` the standalone Lean excerpt at
+   `examples/proof-carrying-cli-closure/source.lean` to confirm it still
+   elaborates against the public Leanix surface.
+
+Run it from the repo root:
+
+```sh
+cargo run --locked --manifest-path e2e/runner/Cargo.toml
+```
+
+## Success Criteria — status
+
+- ✅ `lake build` succeeds.
+- ✅ `lake exe leanix render-example --out generated/flake.nix` writes a flake.
+- ✅ `nix flake check path:./generated` succeeds for every valid case.
+- ✅ The PoC examples still fit in one sitting.
+
+## Notes for Self-Check Flakes
+
+The `path:` prefix matters inside the `leanix` Git repo because `generated/`
+is an ignored artifact directory.
 
 For self-checking generated flakes, pass an absolute source URL such as
 `path:/home/kasper/projects/leanix`. A relative parent like `path:..` does not
 survive Nix's flake copying semantics when the generated flake itself is the
 flake root.
 
-The e2e harness belongs in Rust. Lean should render and validate typed graphs;
-Rust should run `lake`, call `nix flake check`, manage generated paths, and
-eventually handle snapshots, caches, lockfiles, and corpus-style tests.
+## Boundary
 
-The first graph invariant is package closure. `BuildExpr.package` creates a
-typed edge from one package to another for the same system. Leanix validates
-that every edge points at an existing package and that package edges are
-acyclic before rendering.
+Lean owns the typed graph, validation, schema lowering, and rendering. Rust
+owns running `lake`/`nix`, managing the `generated/` directory, and asserting
+golden output. Nix is the backend that evaluates and builds the rendered
+artifact.
 
-The first schema invariant is `CliProject`: one package, default app, default
-dev shell, and default check. The schema validates this typed contract and then
-lowers it to ordinary flake `Outputs`, where graph validation and rendering
-continue as before.
+Renderer fixture update workflow is documented in `e2e/golden/README.md`.
 
-The schema boundary is explicit: raw schema values pass through
-`ValidatedSchema.validate`, and downstream code can require `ValidatedSchema`
-instead of accepting unchecked schema data.
-
-For `CliProject`, this is now proof-carrying rather than only a marker:
-`CliProject.Valid` records the equalities and membership check that validation
-established.
+Open issues with the current PoC are documented in `flagged.md` at the repo
+root.

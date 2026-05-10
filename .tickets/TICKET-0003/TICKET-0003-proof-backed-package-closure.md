@@ -22,3 +22,12 @@ Move the package-closure boundary toward proof-carrying graph values.
 2. A checked package graph carries evidence, or a documented finite check, for
    acyclicity.
 3. Existing valid and invalid closure examples still pass through Rust e2e.
+
+## Progress
+- Added `PackageClosure.Valid` with proof fields for package reference
+  resolution and the finite acyclicity check.
+- Added `CheckedPackageGraph system` as the proof-carrying package graph
+  boundary.
+- Added renderer entry points that accept `CheckedPackageGraph`.
+- Added checked graph witnesses to the canonical examples and standalone
+  showcase excerpt.

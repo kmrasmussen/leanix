@@ -21,3 +21,8 @@ Add committed golden outputs for selected generated flakes.
 1. Rust e2e fails when selected rendered flakes change unexpectedly.
 2. The update workflow is documented.
 3. Nix checks still run after golden comparison passes.
+
+## Progress
+- Added `e2e/golden/` fixtures for hello, typed closure, and CLI schema.
+- Updated the Rust harness to compare selected fixtures before `nix flake check`.
+- Documented the intentional update workflow in `e2e/golden/README.md`.

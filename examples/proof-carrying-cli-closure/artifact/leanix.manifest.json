@@ -1,0 +1,57 @@
+{
+  "formatVersion": 1,
+  "rendererVersion": "leanix-poc-1",
+  "sourceRef": "examples/proof-carrying-cli-closure/source.lean",
+  "generatedFiles": [
+    "flake.nix",
+    "leanix.manifest.json"
+  ],
+  "systems": [
+    "x86_64-linux"
+  ],
+  "inputs": [
+    {
+      "name": "nixpkgs",
+      "trustClass": "lockfile-backed-flake-input",
+      "url": "github:NixOS/nixpkgs/nixos-unstable"
+    }
+  ],
+  "packages": [
+    {
+      "name": "helloWrapper",
+      "builder": "runSteps"
+    },
+    {
+      "name": "helloTool",
+      "builder": "nixpkgs"
+    }
+  ],
+  "apps": [
+    {
+      "name": "default",
+      "packageName": "helloWrapper"
+    }
+  ],
+  "checks": [
+    {
+      "name": "default",
+      "packageName": "helloWrapper"
+    }
+  ],
+  "checkedInvariants": [
+    "validateFlake.uniqueInputNames",
+    "validateFlake.uniqueOutputNames",
+    "validateFlake.packageReferencesResolve",
+    "PackageClosure.refsResolve",
+    "PackageClosure.acyclicByFuel",
+    "CliProject.defaultOutputNames",
+    "CliProject.appPointsAtPackage",
+    "CliProject.checkPointsAtPackage",
+    "CliProject.devShellContainsPackage",
+    "sourceTrust.fetchLikeSourcesRequireHash"
+  ],
+  "replayCommands": [
+    "lake env lean examples/proof-carrying-cli-closure/source.lean",
+    "nix flake check path:."
+  ]
+}
