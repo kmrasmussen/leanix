@@ -12,9 +12,12 @@ def helloToolPackage : Package .x86_64_linux where
 def helloWrapperPackage : Package .x86_64_linux where
   name := "helloWrapper"
   build := .runSteps "hello-wrapper" [.package "helloTool"] [
-    .installExecutableScript "$out/bin/hello-wrapper" (
-      "#!/bin/sh\n" ++
-      "${self.packages.${system}.helloTool}/bin/hello --version"
+    .installExecutableTextScript "$out/bin/hello-wrapper" (
+      .concat [
+        .literal "#!/bin/sh\n",
+        .package "helloTool",
+        .literal "/bin/hello --version\n"
+      ]
     )
   ]
 

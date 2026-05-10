@@ -21,6 +21,24 @@ def validatePackageRef (system : System) (packageNames : List String) (owner : S
     throw (.missingPackageRef system owner packageName)
 
 mutual
+def validateBuildTextInputRefs (inputNames : List String) : BuildText -> Except ValidateError Unit
+  | .literal _ => pure ()
+  | .package _ => pure ()
+  | .inputPath name =>
+      if inputNames.contains name then
+        pure ()
+      else
+        throw (.missingInputRef name)
+  | .outPath => pure ()
+  | .concat parts => validateBuildTextInputRefsList inputNames parts
+
+def validateBuildTextInputRefsList (inputNames : List String) :
+    List BuildText -> Except ValidateError Unit
+  | [] => pure ()
+  | part :: rest => do
+      validateBuildTextInputRefs inputNames part
+      validateBuildTextInputRefsList inputNames rest
+
 def validateBuildExprInputRefs (inputNames : List String) : BuildExpr -> Except ValidateError Unit
   | .nixpkgs _ => pure ()
   | .inputPath name =>
@@ -41,14 +59,27 @@ def validateBuildExprInputRefs (inputNames : List String) : BuildExpr -> Except 
 def validateBuildStepInputRefs (inputNames : List String) : BuildStep -> Except ValidateError Unit
   | .copySource source _ => validateBuildExprInputRefs inputNames source
   | .installExecutableScript _ _ => pure ()
+  | .installExecutableTextScript _ content => validateBuildTextInputRefs inputNames content
   | .buildLeanProject _ => pure ()
   | .mkdir _ => pure ()
   | .writeFile _ _ => pure ()
+  | .writeTextFile _ content => validateBuildTextInputRefs inputNames content
   | .chmodExecutable _ => pure ()
   | .run _ => pure ()
 end
 
 mutual
+def buildTextPackageRefs : BuildText -> List String
+  | .literal _ => []
+  | .package name => [name]
+  | .inputPath _ => []
+  | .outPath => []
+  | .concat parts => buildTextPackageRefsList parts
+
+def buildTextPackageRefsList : List BuildText -> List String
+  | [] => []
+  | part :: rest => buildTextPackageRefs part ++ buildTextPackageRefsList rest
+
 def buildExprPackageRefs : BuildExpr -> List String
   | .nixpkgs _ => []
   | .inputPath _ => []
@@ -65,9 +96,11 @@ def buildExprPackageRefsList : List BuildExpr -> List String
 def buildStepPackageRefs : BuildStep -> List String
   | .copySource source _ => buildExprPackageRefs source
   | .installExecutableScript _ _ => []
+  | .installExecutableTextScript _ content => buildTextPackageRefs content
   | .buildLeanProject _ => []
   | .mkdir _ => []
   | .writeFile _ _ => []
+  | .writeTextFile _ content => buildTextPackageRefs content
   | .chmodExecutable _ => []
   | .run _ => []
 
@@ -77,6 +110,21 @@ def buildStepPackageRefsList : List BuildStep -> List String
 end
 
 mutual
+def validateBuildTextPackageRefs (system : System) (packageNames : List String) (owner : String) :
+    BuildText -> Except ValidateError Unit
+  | .literal _ => pure ()
+  | .package name => validatePackageRef system packageNames owner name
+  | .inputPath _ => pure ()
+  | .outPath => pure ()
+  | .concat parts => validateBuildTextPackageRefsList system packageNames owner parts
+
+def validateBuildTextPackageRefsList (system : System) (packageNames : List String)
+    (owner : String) : List BuildText -> Except ValidateError Unit
+  | [] => pure ()
+  | part :: rest => do
+      validateBuildTextPackageRefs system packageNames owner part
+      validateBuildTextPackageRefsList system packageNames owner rest
+
 def validateBuildExprPackageRefs (system : System) (packageNames : List String) (owner : String) :
     BuildExpr -> Except ValidateError Unit
   | .nixpkgs _ => pure ()
@@ -95,9 +143,12 @@ def validateBuildStepPackageRefs (system : System) (packageNames : List String) 
     BuildStep -> Except ValidateError Unit
   | .copySource source _ => validateBuildExprPackageRefs system packageNames owner source
   | .installExecutableScript _ _ => pure ()
+  | .installExecutableTextScript _ content =>
+      validateBuildTextPackageRefs system packageNames owner content
   | .buildLeanProject _ => pure ()
   | .mkdir _ => pure ()
   | .writeFile _ _ => pure ()
+  | .writeTextFile _ content => validateBuildTextPackageRefs system packageNames owner content
   | .chmodExecutable _ => pure ()
   | .run _ => pure ()
 end

@@ -35,7 +35,9 @@ gives:
 - `BuildExpr` with constructors for `nixpkgs` lookups, flake-input paths, typed
   package references (`BuildExpr.package`), raw shell `runCommand`, and a small
   structured `runSteps` (copy source, install executable script, build Lean
-  project, mkdir, writeFile, chmodExecutable, raw run)
+  project, mkdir, writeFile, chmodExecutable, raw run). Generated script/file
+  text can use `BuildText` fragments so package references inside content are
+  validated instead of hiding as raw Nix interpolation.
 - `Input` with a `flake` / fixed-output `source` / `localDevSource` /
   `impureLocalSource` distinction. Fetch-like `source` pins must carry a
   `narHash`; local sources are explicitly development-only or impure.

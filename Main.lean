@@ -1,7 +1,7 @@
 import Leanix
 
 def usage : String :=
-  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-escaping --out generated/flake.nix\n  leanix render-multi-system --out generated/flake.nix\n  leanix render-pinned-inputs --out generated/flake.nix\n  leanix render-hashed-source --source path:/absolute/source --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix\n  leanix emit-artifact --out generated/showcase-artifact\n  leanix emit-showcase-artifact --out generated/showcase-artifact\n  leanix render-invalid-source-missing-hash --out generated/flake.nix"
+  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-escaping --out generated/flake.nix\n  leanix render-multi-system --out generated/flake.nix\n  leanix render-pinned-inputs --out generated/flake.nix\n  leanix render-hashed-source --source path:/absolute/source --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix\n  leanix emit-artifact --out generated/showcase-artifact\n  leanix emit-showcase-artifact --out generated/showcase-artifact\n  leanix render-invalid-typed-text-ref --out generated/flake.nix\n  leanix render-invalid-source-missing-hash --out generated/flake.nix"
 
 def renderValidatedToFile (validated : Leanix.ValidatedFlake) (outputPath : String) : IO UInt32 := do
   match Leanix.renderFlake validated with
@@ -68,6 +68,8 @@ def main (args : List String) : IO UInt32 := do
       renderToFile Leanix.Examples.missingRefFlake outputPath
   | ["render-invalid-cycle", "--out", outputPath] =>
       renderToFile Leanix.Examples.cycleFlake outputPath
+  | ["render-invalid-typed-text-ref", "--out", outputPath] =>
+      renderToFile Leanix.Examples.typedTextMissingRefFlake outputPath
   | ["render-invalid-source-missing-hash", "--out", outputPath] =>
       renderToFile Leanix.Examples.unhashedSourceFlake outputPath
   | ["render-self", "--source", sourceUrl, "--out", outputPath] =>

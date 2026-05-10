@@ -44,6 +44,14 @@ inductive Input where
   | impureLocalSource : String -> Input
   deriving Repr, BEq
 
+inductive BuildText where
+  | literal : String -> BuildText
+  | package : String -> BuildText
+  | inputPath : String -> BuildText
+  | outPath : BuildText
+  | concat : List BuildText -> BuildText
+  deriving Repr, BEq
+
 mutual
 inductive BuildExpr where
   | nixpkgs : String -> BuildExpr
@@ -56,9 +64,11 @@ inductive BuildExpr where
 inductive BuildStep where
   | copySource : (source : BuildExpr) -> (destination : String) -> BuildStep
   | installExecutableScript : (path : String) -> (content : String) -> BuildStep
+  | installExecutableTextScript : (path : String) -> (content : BuildText) -> BuildStep
   | buildLeanProject : (directory : String) -> BuildStep
   | mkdir : String -> BuildStep
   | writeFile : (path : String) -> (content : String) -> BuildStep
+  | writeTextFile : (path : String) -> (content : BuildText) -> BuildStep
   | chmodExecutable : String -> BuildStep
   | run : String -> BuildStep
   deriving Repr, BEq

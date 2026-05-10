@@ -56,3 +56,19 @@ strings to express dependencies.
    for transition.
 2. Migrate the showcase wrapper.
 3. Tighten validation to walk fragments for package references.
+
+## Progress
+- Added `BuildText` with literal, package, input-path, out-path, and concat
+  fragments.
+- Added fragment-based `BuildStep.installExecutableTextScript` and
+  `BuildStep.writeTextFile` while keeping raw text constructors as documented
+  escape hatches.
+- Migrated the canonical showcase wrapper and standalone showcase excerpt to
+  `BuildText.package "helloTool"` instead of raw
+  `${self.packages.${system}.helloTool}` text.
+- Extended validation and closure analysis to walk package/input references
+  inside `BuildText`.
+- Added a Rust e2e invalid case that rejects a missing package reference inside
+  typed build text.
+- Updated renderer goldens and proof-carrying artifact fixtures for the typed
+  text output shape.

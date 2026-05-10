@@ -244,6 +244,22 @@ def renderOutputArgs : List (String × Input) -> List String
       | _ => renderOutputArg input.fst :: renderOutputArgs rest
 
 mutual
+def renderBuildTextFragment (system : System) : BuildText -> String
+  | .literal text => escapeNixString text
+  | .package name => "${self.packages.${system}." ++ renderAttrName name ++ "}"
+  | .inputPath name => "${" ++ name ++ "}"
+  | .outPath => "$out"
+  | .concat parts => renderBuildTextFragments system parts
+
+def renderBuildTextFragments (system : System) : List BuildText -> String
+  | [] => ""
+  | part :: rest => renderBuildTextFragment system part ++ renderBuildTextFragments system rest
+end
+
+def renderBuildText (system : System) (text : BuildText) : String :=
+  "\"" ++ renderBuildTextFragment system text ++ "\""
+
+mutual
 def renderBuildExprWithFuel (system : System) : Nat -> BuildExpr -> Except String String
   | 0, _ => throw "Leanix render depth exceeded"
   | _ + 1, .nixpkgs attr => pure <| "pkgs." ++ attr
@@ -272,11 +288,17 @@ def renderBuildStepWithFuel (system : System) (fuel : Nat) : BuildStep -> Except
   | .installExecutableScript path content =>
       pure <| "          install -D -m755 ${pkgs.writeText " ++ renderString "leanix-script" ++ " " ++
         renderStringAllowInterpolation content ++ "} " ++ renderString path
+  | .installExecutableTextScript path content =>
+      pure <| "          install -D -m755 ${pkgs.writeText " ++ renderString "leanix-script" ++ " " ++
+        renderBuildText system content ++ "} " ++ renderString path
   | .buildLeanProject directory =>
       pure <| "          (cd " ++ renderString directory ++ " && lake build)"
   | .mkdir path => pure <| "          mkdir -p " ++ renderString path
   | .writeFile path content =>
       pure <| "          cp ${pkgs.writeText " ++ renderString "leanix-file" ++ " " ++ renderString content ++
+        "} " ++ renderString path
+  | .writeTextFile path content =>
+      pure <| "          cp ${pkgs.writeText " ++ renderString "leanix-file" ++ " " ++ renderBuildText system content ++
         "} " ++ renderString path
   | .chmodExecutable path => pure <| "          chmod +x " ++ renderString path
   | .run command => pure <| "          " ++ command

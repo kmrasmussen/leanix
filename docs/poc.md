@@ -138,10 +138,17 @@ operations that Leanix wants to reason about semantically:
 - building a Lean project with `lake build`
 - simple filesystem operations such as `mkdir`, `writeFile`, and `chmod +x`
 
-Raw shell remains as an explicit escape hatch in three places:
+Script and file content can use `BuildText` fragments when it needs typed
+references. `BuildText.package` is validated by the same package-reference walk
+as `BuildExpr.package`, so package dependencies inside generated scripts are no
+longer hidden in raw Nix interpolation.
+
+Raw text and shell remain as explicit escape hatches in five places:
 
 - `BuildExpr.runCommand`, for derivations that have not moved to structured
   steps yet
+- `BuildStep.installExecutableScript`, for raw executable text during migration
+- `BuildStep.writeFile`, for raw file text during migration
 - `BuildStep.run`, for a single command inside an otherwise structured step
   list
 - `Check.command`, because checks are still modeled as command strings

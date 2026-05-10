@@ -167,9 +167,12 @@ def helloToolPackage : Package .x86_64_linux where
 def helloWrapperPackage : Package .x86_64_linux where
   name := "helloWrapper"
   build := .runSteps "hello-wrapper" [.package "helloTool"] [
-    .installExecutableScript "$out/bin/hello-wrapper" (
-      "#!/bin/sh\n" ++
-      "${self.packages.${system}.helloTool}/bin/hello --version"
+    .installExecutableTextScript "$out/bin/hello-wrapper" (
+      .concat [
+        .literal "#!/bin/sh\n",
+        .package "helloTool",
+        .literal "/bin/hello --version\n"
+      ]
     )
   ]
 
@@ -216,6 +219,31 @@ def missingRefFlake : Flake where
   description := "Leanix missing package reference example"
   inputs := [("nixpkgs", nixpkgsInput)]
   outputs := missingRefOutputs
+
+def typedTextMissingRefPackage : Package .x86_64_linux where
+  name := "typedTextBroken"
+  build := .runSteps "typed-text-broken" [] [
+    .installExecutableTextScript "$out/bin/broken" (
+      .concat [
+        .literal "#!/bin/sh\n",
+        .package "missingTextDep",
+        .literal "/bin/missing\n"
+      ]
+    )
+  ]
+
+def typedTextMissingRefOutputs : Outputs where
+  packages
+    | .x86_64_linux => [typedTextMissingRefPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks := fun _ => []
+
+def typedTextMissingRefFlake : Flake where
+  description := "Leanix typed build text missing package reference example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := typedTextMissingRefOutputs
 
 def cyclePackageA : Package .x86_64_linux where
   name := "cycleA"

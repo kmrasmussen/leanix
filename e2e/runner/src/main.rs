@@ -442,6 +442,12 @@ fn main() -> Result<(), String> {
                 "error: package dependency cycle for x86_64-linux: cycleA reaches itself through cycleB",
         },
         InvalidCase {
+            name: "typed build text missing package reference",
+            render_arg: "render-invalid-typed-text-ref",
+            expected_stderr:
+                "error: package typedTextBroken for x86_64-linux refers to missing package missingTextDep",
+        },
+        InvalidCase {
             name: "invalid CLI schema",
             render_arg: "render-invalid-cli-schema",
             expected_stderr: "error: CliProject app must point at the project package",

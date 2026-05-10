@@ -16,7 +16,7 @@
       in {
         "helloTool" = pkgs.hello;
         "helloWrapper" = pkgs.runCommand "hello-wrapper" { nativeBuildInputs = [ self.packages.${system}."helloTool" ]; } ''
-          install -D -m755 ${pkgs.writeText "leanix-script" "#!/bin/sh\n${self.packages.${system}.helloTool}/bin/hello --version"} "$out/bin/hello-wrapper"
+          install -D -m755 ${pkgs.writeText "leanix-script" "#!/bin/sh\n${self.packages.${system}."helloTool"}/bin/hello --version\n"} "$out/bin/hello-wrapper"
         '';
         "default" = self.packages.${system}."helloTool";
       };
