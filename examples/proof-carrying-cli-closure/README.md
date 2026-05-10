@@ -51,11 +51,14 @@ The local excerpt is:
 examples/proof-carrying-cli-closure/source.lean
 ```
 
-The canonical project source is `showcaseCliProject` in:
+It imports `Leanix.Examples` and re-exports the canonical definitions used by
+the renderer. The canonical project source is `showcaseCliProject` in:
 
 ```text
 Leanix/Examples.lean
 ```
+
+That keeps the excerpt executable without duplicating package and schema values.
 
 The expected rendered Nix is:
 

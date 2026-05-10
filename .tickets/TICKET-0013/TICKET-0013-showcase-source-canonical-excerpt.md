@@ -52,3 +52,13 @@ time. The "import and re-export" route is the cleanest if the goal is a
 runnable, copy-pasteable example. The "generate" route preserves the demo
 property of having a self-contained file but requires a generator. Pick in
 analysis.
+
+## Progress
+- Chose the import-and-re-export route.
+- Replaced the duplicated showcase definitions in
+  `examples/proof-carrying-cli-closure/source.lean` with aliases to
+  `Leanix.Examples`.
+- Kept the e2e harness elaboration of the showcase source file, so broken
+  exports or stale names still fail the normal run.
+- Updated the showcase README to state that the local excerpt is executable but
+  not a second source of truth.
