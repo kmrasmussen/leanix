@@ -1,0 +1,59 @@
+# Leanix
+
+Leanix is an adjacent project to `nixparserlean`.
+
+**Mission:** Nix flakes as Lean-checked build graphs.
+
+`nixparserlean` models existing Nix in Lean. Leanix starts from the other side:
+what if flakes were typed first? Lean becomes the authoring language for
+reproducible build graphs, and Nix interop becomes a backend.
+
+## Initial Hypothesis
+
+A typed flake should make these things structural instead of conventional:
+
+- supported systems
+- flake inputs and source pins
+- package, app, dev shell, check, and formatter outputs
+- dependency graphs
+- builder identity and arguments
+- environment variables
+- hash and provenance requirements
+
+The first version is not a Nix replacement. It is a small Lean model that lets
+us ask which flake invariants can be checked before evaluation or build time.
+
+## First PoC
+
+The smallest useful proof of concept is a typed hello flake:
+
+```text
+Lean value -> validation -> generated flake.nix -> nix build/check
+```
+
+That should include one package, one app, one development shell, and one check
+for a single system. The point is to prove the shape of the workflow before
+modeling the full Nix evaluator or store.
+
+## Repository Layout
+
+```text
+Leanix/
+  Core.lean      -- first typed flake/build graph model
+Main.lean        -- tiny executable smoke target
+docs/
+  vision.md      -- project idea and design pressure
+  roadmap.md     -- staged plan
+  poc.md         -- first proof-of-concept target
+flake.nix        -- Nix dev shell and build check
+lakefile.lean    -- Lean package
+```
+
+## Quick Start
+
+```sh
+lake build
+lake exe leanix
+lake exe leanix render-example --out generated/flake.nix
+nix flake check path:./generated
+```
