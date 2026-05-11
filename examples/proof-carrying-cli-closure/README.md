@@ -44,6 +44,11 @@ nix develop -c lake exe leanix verify-artifact generated/showcase-artifact
 nix flake check path:./generated/showcase-artifact
 ```
 
+`verify-artifact` reads the manifest before replaying the showcase checks. It
+verifies that every path listed in `generatedFiles` exists and that files listed
+in `fileHashes` still match their recorded Leanix content hash. This catches
+tampered or missing generated files before running the artifact replay commands.
+
 ## Source
 
 The local excerpt is:

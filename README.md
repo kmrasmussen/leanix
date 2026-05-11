@@ -27,6 +27,10 @@ can remain ergonomic with floating refs, while proof-carrying artifacts record
 pinned revision/hash metadata and reject floating flake inputs unless a future
 lockfile witness is present.
 
+Artifact verification also reads manifest-declared generated files and file
+hashes before replaying showcase checks, so tampered or missing generated files
+are rejected directly by `leanix verify-artifact`.
+
 Leanix also has its first typed output schema. `CliProject` lowers a typed
 package/app/dev shell/check contract to ordinary flake outputs after validating
 that the conventional defaults point at the project package.

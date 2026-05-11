@@ -6,6 +6,9 @@
     "flake.nix",
     "leanix.manifest.json"
   ],
+  "fileHashes": [
+    "flake.nix leanix-fnv1a32-933545469"
+  ],
   "systems": [
     "x86_64-linux"
   ],

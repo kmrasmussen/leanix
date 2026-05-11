@@ -37,6 +37,98 @@ def readFileExcept (path : System.FilePath) : IO (Except String String) := do
   catch error =>
     pure (.error s!"failed reading {path}: {error}")
 
+def dropTrailingComma (value : String) : String :=
+  match value.toList.reverse with
+  | ',' :: rest => String.ofList rest.reverse
+  | _ => value
+
+def parseSimpleJsonString? (value : String) : Option String :=
+  match value.toList with
+  | '"' :: rest =>
+      match rest.reverse with
+      | '"' :: body => some (String.ofList body.reverse)
+      | _ => none
+  | _ => none
+
+def isJsonWhitespace : Char -> Bool
+  | ' ' => true
+  | '\t' => true
+  | '\r' => true
+  | _ => false
+
+def dropLeadingJsonWhitespace : List Char -> List Char
+  | [] => []
+  | char :: rest =>
+      if isJsonWhitespace char then
+        dropLeadingJsonWhitespace rest
+      else
+        char :: rest
+
+def trimJsonLine (value : String) : String :=
+  String.ofList <|
+    dropLeadingJsonWhitespace (dropLeadingJsonWhitespace value.toList |>.reverse) |>.reverse
+
+partial def collectStringArrayLines (field : String) :
+    List String -> Bool -> List String -> Option (List String)
+  | [], true, _ => none
+  | [], false, _ => none
+  | line :: rest, false, acc =>
+      if trimJsonLine line == Leanix.jsonString field ++ ": [" then
+        collectStringArrayLines field rest true acc
+      else
+        collectStringArrayLines field rest false acc
+  | line :: rest, true, acc =>
+      let trimmed := trimJsonLine line
+      if trimmed == "]" || trimmed == "]," then
+        some acc.reverse
+      else
+        match parseSimpleJsonString? (dropTrailingComma trimmed) with
+        | some value => collectStringArrayLines field rest true (value :: acc)
+        | none => none
+
+def extractStringArray (field manifest : String) : Except String (List String) :=
+  match collectStringArrayLines field (manifest.splitOn "\n") false [] with
+  | some values => .ok values
+  | none => .error s!"manifest field {field} is missing or malformed"
+
+def parseHashEntry? (entry : String) : Option (String × String) :=
+  match Leanix.splitOnChar ' ' entry with
+  | path :: hashParts =>
+      match hashParts with
+      | [] => none
+      | _ => some (path, Leanix.joinWith " " hashParts)
+  | _ => none
+
+def verifyGeneratedFilesExist (dir : System.FilePath) (manifest : String) :
+    IO (Except String Unit) := do
+  match extractStringArray "generatedFiles" manifest with
+  | .error error => pure (.error error)
+  | .ok files => do
+      for file in files do
+        match ← readFileExcept (dir / file) with
+        | .ok _ => pure ()
+        | .error _ => return .error s!"generated file missing: {file}"
+      pure (.ok ())
+
+def verifyFileHashes (dir : System.FilePath) (manifest : String) :
+    IO (Except String Unit) := do
+  match extractStringArray "fileHashes" manifest with
+  | .error error => pure (.error error)
+  | .ok entries => do
+      for entry in entries do
+        match parseHashEntry? entry with
+        | none => return .error s!"manifest file hash entry is malformed: {entry}"
+        | some (file, expectedHash) =>
+            match ← readFileExcept (dir / file) with
+            | .error _ => return .error s!"generated file missing: {file}"
+            | .ok content =>
+                let actualHash := Leanix.contentHash content
+                if actualHash == expectedHash then
+                  pure ()
+                else
+                  return .error s!"artifact file hash mismatch: {file}"
+      pure (.ok ())
+
 def runReplayCommand (cwd? : Option System.FilePath) (cmd : String) (args : Array String) :
     IO (Except String Unit) := do
   let output ← IO.Process.output {
@@ -54,45 +146,54 @@ def verifyShowcaseArtifact (artifactDir : String) : IO (Except String Unit) := d
   let manifestPath := dir / "leanix.manifest.json"
   let flakePath := dir / "flake.nix"
   let manifest ← readFileExcept manifestPath
-  let flake ← readFileExcept flakePath
-  match manifest, flake with
-  | .error error, _ => pure (.error error)
-  | _, .error error => pure (.error error)
-  | .ok manifest, .ok flake => do
+  match manifest with
+  | .error error => pure (.error error)
+  | .ok manifest => do
       if stringContains manifest "\"trustClass\": \"floating-flake-input\"" then
         pure (.error "artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness")
       else do
-        let checks : List (Except String Unit) := [
-          requireSubstring "manifest" manifest "\"generatedFiles\"",
-          requireSubstring "manifest generated files" manifest "\"flake.nix\"",
-          requireSubstring "manifest generated files" manifest "\"leanix.manifest.json\"",
-          requireSubstring "manifest systems" manifest "\"x86_64-linux\"",
-          requireSubstring "manifest input trust class" manifest "\"trustClass\": \"pinned-flake-input\"",
-          requireSubstring "manifest input pin policy" manifest "\"pinPolicy\": \"pinned-ref\"",
-          requireSubstring "manifest input rev" manifest "\"rev\"",
-          requireSubstring "manifest input narHash" manifest "\"narHash\"",
-          requireSubstring "manifest packages" manifest "\"helloWrapper\"",
-          requireSubstring "manifest packages" manifest "\"helloTool\"",
-          requireSubstring "manifest apps/checks" manifest "\"packageName\": \"helloWrapper\"",
-          requireSubstring "manifest checked invariants" manifest "\"PackageClosure.refsResolve\"",
-          requireSubstring "manifest checked invariants" manifest "\"PackageClosure.acyclicByFuel\"",
-          requireSubstring "manifest checked invariants" manifest "\"CliProject.appPointsAtPackage\"",
-          requireSubstring "manifest checked invariants" manifest "\"sourceTrust.fetchLikeSourcesRequireHash\"",
-          requireSubstring "artifact flake packages" flake "\"helloWrapper\" =",
-          requireSubstring "artifact flake packages" flake "\"helloTool\" =",
-          requireSubstring "artifact flake default package" flake
-            "\"default\" = self.packages.${system}.\"helloWrapper\";",
-          requireSubstring "artifact flake check" flake "\"default\" = pkgs.runCommand"
-        ]
-        match firstError checks with
-        | some error => pure (.error error)
-        | none => do
-            match ← runReplayCommand none "lake" #["env", "lean", "examples/proof-carrying-cli-closure/source.lean"] with
+        match ← verifyGeneratedFilesExist dir manifest with
+        | .error error => pure (.error error)
+        | .ok _ => do
+            match ← verifyFileHashes dir manifest with
             | .error error => pure (.error error)
-            | .ok _ =>
-                match ← runReplayCommand (some dir) "nix" #["flake", "check", "path:."] with
+            | .ok _ => do
+                let flake ← readFileExcept flakePath
+                match flake with
                 | .error error => pure (.error error)
-                | .ok _ => pure (.ok ())
+                | .ok flake =>
+                    let checks : List (Except String Unit) := [
+                      requireSubstring "manifest" manifest "\"generatedFiles\"",
+                      requireSubstring "manifest" manifest "\"fileHashes\"",
+                      requireSubstring "manifest generated files" manifest "\"flake.nix\"",
+                      requireSubstring "manifest generated files" manifest "\"leanix.manifest.json\"",
+                      requireSubstring "manifest systems" manifest "\"x86_64-linux\"",
+                      requireSubstring "manifest input trust class" manifest "\"trustClass\": \"pinned-flake-input\"",
+                      requireSubstring "manifest input pin policy" manifest "\"pinPolicy\": \"pinned-ref\"",
+                      requireSubstring "manifest input rev" manifest "\"rev\"",
+                      requireSubstring "manifest input narHash" manifest "\"narHash\"",
+                      requireSubstring "manifest packages" manifest "\"helloWrapper\"",
+                      requireSubstring "manifest packages" manifest "\"helloTool\"",
+                      requireSubstring "manifest apps/checks" manifest "\"packageName\": \"helloWrapper\"",
+                      requireSubstring "manifest checked invariants" manifest "\"PackageClosure.refsResolve\"",
+                      requireSubstring "manifest checked invariants" manifest "\"PackageClosure.acyclicByFuel\"",
+                      requireSubstring "manifest checked invariants" manifest "\"CliProject.appPointsAtPackage\"",
+                      requireSubstring "manifest checked invariants" manifest "\"sourceTrust.fetchLikeSourcesRequireHash\"",
+                      requireSubstring "artifact flake packages" flake "\"helloWrapper\" =",
+                      requireSubstring "artifact flake packages" flake "\"helloTool\" =",
+                      requireSubstring "artifact flake default package" flake
+                        "\"default\" = self.packages.${system}.\"helloWrapper\";",
+                      requireSubstring "artifact flake check" flake "\"default\" = pkgs.runCommand"
+                    ]
+                    match firstError checks with
+                    | some error => pure (.error error)
+                    | none => do
+                        match ← runReplayCommand none "lake" #["env", "lean", "examples/proof-carrying-cli-closure/source.lean"] with
+                        | .error error => pure (.error error)
+                        | .ok _ =>
+                            match ← runReplayCommand (some dir) "nix" #["flake", "check", "path:."] with
+                            | .error error => pure (.error error)
+                            | .ok _ => pure (.ok ())
 
 def renderValidatedToFile (validated : Leanix.ValidatedFlake) (outputPath : String) : IO UInt32 := do
   match Leanix.renderFlake validated with

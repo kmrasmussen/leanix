@@ -28,6 +28,7 @@ structure ArtifactManifest where
   rendererVersion : String
   sourceRef : String
   generatedFiles : List String
+  fileHashes : List String
   systems : List System
   inputs : List ArtifactInput
   packages : List ArtifactPackage
@@ -123,6 +124,16 @@ def jsonArrayField (name : String) (lines : List String) (comma : Bool) : List S
       | [] => []
       | last :: before => ((last ++ suffix) :: before).reverse
 
+def contentHashStep (state : Nat) (char : Char) : Nat :=
+  (state * 16777619 + char.toNat) % 4294967296
+
+def contentHashValue : List Char -> Nat -> Nat
+  | [], state => state
+  | char :: rest, state => contentHashValue rest (contentHashStep state char)
+
+def contentHash (value : String) : String :=
+  "leanix-fnv1a32-" ++ toString (contentHashValue value.toList 2166136261)
+
 def ArtifactManifest.toJson (manifest : ArtifactManifest) : String :=
   joinWith "\n" <| [
     "{",
@@ -131,6 +142,7 @@ def ArtifactManifest.toJson (manifest : ArtifactManifest) : String :=
     "  " ++ jsonField "sourceRef" (jsonString manifest.sourceRef) ++ ","
   ] ++
   indentLines "  " (jsonArrayField "generatedFiles" (jsonStringArray manifest.generatedFiles) true) ++
+  indentLines "  " (jsonArrayField "fileHashes" (jsonStringArray manifest.fileHashes) true) ++
   indentLines "  " (jsonArrayField "systems" (jsonStringArray (manifest.systems.map System.toNixString)) true) ++
   indentLines "  " (jsonArrayField "inputs" (jsonObjectArray (manifest.inputs.map ArtifactInput.toJsonLines)) true) ++
   indentLines "  " (jsonArrayField "packages" (jsonObjectArray (manifest.packages.map ArtifactPackage.toJsonLines)) true) ++
@@ -206,11 +218,12 @@ def checkArtifact (check : Check system) : ArtifactReference := {
   packageName := check.packageName
 }
 
-def showcaseArtifactManifest : ArtifactManifest := {
+def showcaseArtifactManifest (renderedFlake : String) : ArtifactManifest := {
   formatVersion := 1
   rendererVersion := "leanix-poc-1"
   sourceRef := "examples/proof-carrying-cli-closure/source.lean"
   generatedFiles := ["flake.nix", "leanix.manifest.json"]
+  fileHashes := ["flake.nix " ++ contentHash renderedFlake]
   systems := [.x86_64_linux]
   inputs := [("nixpkgs", Examples.pinnedNixpkgsInput)].map inputArtifact
   packages := (Examples.showcaseCliProject.package :: Examples.showcaseCliProject.extraPackages).map packageArtifact
@@ -245,6 +258,6 @@ def renderShowcaseArtifact : Except String (String × String) := do
     | .ok validatedFlake => pure validatedFlake
     | .error error => throw error.toString
   let renderedFlake ← renderFlake validatedFlake
-  pure (renderedFlake, showcaseArtifactManifest.toJson)
+  pure (renderedFlake, (showcaseArtifactManifest renderedFlake).toJson)
 
 end Leanix

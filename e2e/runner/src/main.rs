@@ -151,6 +151,33 @@ fn compare_file(repo: &Path, actual: &str, expected: &str) -> Result<(), String>
     }
 }
 
+fn expect_verify_artifact_failure(
+    repo: &Path,
+    artifact_dir: &str,
+    expected_stderr: &str,
+) -> Result<(), String> {
+    let output = Command::new("lake")
+        .args(["exe", "leanix", "verify-artifact", artifact_dir])
+        .current_dir(repo)
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|err| format!("failed to start lake: {err}"))?;
+
+    if output.status.success() {
+        return Err(format!("{artifact_dir} unexpectedly verified"));
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let actual = stderr.trim();
+    if actual == expected_stderr {
+        Ok(())
+    } else {
+        Err(format!(
+            "artifact verifier stderr mismatch\nexpected: {expected_stderr}\nactual: {actual}"
+        ))
+    }
+}
+
 fn run_artifact_case(repo: &Path) -> Result<(), String> {
     let artifact_dir = "generated/showcase-artifact";
     eprintln!("case: proof-carrying flake artifact");
@@ -189,6 +216,53 @@ fn run_artifact_case(repo: &Path) -> Result<(), String> {
         "nix",
         &["flake", "check", "path:./generated/showcase-artifact"],
     )?;
+
+    let tampered_artifact_dir = "generated/tampered-artifact";
+    eprintln!("case: artifact tamper rejection");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "emit-artifact",
+            "--out",
+            tampered_artifact_dir,
+        ],
+    )?;
+    let tampered_flake_path = repo.join(tampered_artifact_dir).join("flake.nix");
+    let mut tampered_flake = fs::read_to_string(&tampered_flake_path)
+        .map_err(|err| format!("failed reading {}: {err}", tampered_flake_path.display()))?;
+    tampered_flake.push_str("\n# tampered\n");
+    fs::write(&tampered_flake_path, tampered_flake)
+        .map_err(|err| format!("failed writing {}: {err}", tampered_flake_path.display()))?;
+    expect_verify_artifact_failure(
+        repo,
+        tampered_artifact_dir,
+        "error: artifact file hash mismatch: flake.nix",
+    )?;
+
+    let missing_file_artifact_dir = "generated/missing-file-artifact";
+    eprintln!("case: artifact missing generated file rejection");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "emit-artifact",
+            "--out",
+            missing_file_artifact_dir,
+        ],
+    )?;
+    let missing_flake_path = repo.join(missing_file_artifact_dir).join("flake.nix");
+    fs::remove_file(&missing_flake_path)
+        .map_err(|err| format!("failed removing {}: {err}", missing_flake_path.display()))?;
+    expect_verify_artifact_failure(
+        repo,
+        missing_file_artifact_dir,
+        "error: generated file missing: flake.nix",
+    )?;
     Ok(())
 }
 
@@ -216,28 +290,11 @@ fn run_artifact_policy_rejection_case(repo: &Path) -> Result<(), String> {
     fs::write(&manifest_path, manifest)
         .map_err(|err| format!("failed writing {}: {err}", manifest_path.display()))?;
 
-    let output = Command::new("lake")
-        .args(["exe", "leanix", "verify-artifact", artifact_dir])
-        .current_dir(repo)
-        .stdin(Stdio::null())
-        .output()
-        .map_err(|err| format!("failed to start lake: {err}"))?;
-
-    if output.status.success() {
-        return Err("floating artifact policy unexpectedly verified".to_string());
-    }
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let actual = stderr.trim();
-    let expected =
-        "error: artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness";
-    if actual == expected {
-        Ok(())
-    } else {
-        Err(format!(
-            "floating artifact policy stderr mismatch\nexpected: {expected}\nactual: {actual}"
-        ))
-    }
+    expect_verify_artifact_failure(
+        repo,
+        artifact_dir,
+        "error: artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness",
+    )
 }
 
 fn run_source_injection_case(repo: &Path) -> Result<(), String> {

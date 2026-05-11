@@ -69,4 +69,18 @@ showcase artifact.
 - `blog/yyyy-mm-dd-hh-mm-general-artifact-verifier.md`
 
 ## Progress
-- Not started.
+- Added manifest `fileHashes` metadata for the generated `flake.nix`.
+- Added a Leanix-local content hash used for artifact tamper detection.
+- Added manifest-driven `generatedFiles` existence checks to
+  `leanix verify-artifact`.
+- Added manifest-driven `fileHashes` verification to `leanix verify-artifact`.
+- Kept the existing showcase-specific verifier checks after the generic
+  manifest preflight.
+- Updated the committed proof-carrying showcase artifact manifest.
+- Added e2e coverage for tampered `flake.nix` rejection.
+- Added e2e coverage for missing generated `flake.nix` rejection.
+- Kept generated and committed showcase artifact verification passing.
+- Updated artifact docs, README notes, and added a dated blog note.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`
