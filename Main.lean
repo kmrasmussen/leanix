@@ -1,7 +1,7 @@
 import Leanix
 
 def usage : String :=
-  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-build-plan-text-file --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-formatter-schema --out generated/flake.nix\n  leanix render-library-schema --out generated/flake.nix\n  leanix render-multi-app-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-escaping --out generated/flake.nix\n  leanix render-multi-system --out generated/flake.nix\n  leanix render-multi-system-schema --out generated/flake.nix\n  leanix render-pinned-inputs --out generated/flake.nix\n  leanix render-hashed-source --source path:/absolute/source --out generated/flake.nix\n  leanix render-env --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix\n  leanix emit-artifact --out generated/showcase-artifact\n  leanix emit-showcase-artifact --out generated/showcase-artifact\n  leanix verify-artifact DIR\n  leanix render-invalid-library-schema --out generated/flake.nix\n  leanix render-invalid-formatter-schema --out generated/flake.nix\n  leanix render-invalid-multi-app-schema --out generated/flake.nix\n  leanix render-invalid-build-plan-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-input-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-args --out generated/flake.nix\n  leanix render-invalid-typed-text-ref --out generated/flake.nix\n  leanix render-invalid-typed-check-ref --out generated/flake.nix\n  leanix render-invalid-duplicate-package-env --out generated/flake.nix\n  leanix render-invalid-duplicate-shell-env --out generated/flake.nix\n  leanix render-invalid-unsupported-env-builder --out generated/flake.nix\n  leanix render-invalid-multi-system-schema --out generated/flake.nix\n  leanix render-invalid-source-missing-hash --out generated/flake.nix"
+  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-build-plan-text-file --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-formatter-schema --out generated/flake.nix\n  leanix render-library-schema --out generated/flake.nix\n  leanix render-multi-app-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-escaping --out generated/flake.nix\n  leanix render-multi-system --out generated/flake.nix\n  leanix render-multi-system-schema --out generated/flake.nix\n  leanix render-pinned-inputs --out generated/flake.nix\n  leanix render-hashed-source --source path:/absolute/source --out generated/flake.nix\n  leanix render-env --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix\n  leanix emit-artifact --out generated/showcase-artifact\n  leanix emit-showcase-artifact --out generated/showcase-artifact\n  leanix emit-raw-check-artifact --out generated/raw-check-artifact\n  leanix verify-artifact DIR\n  leanix render-invalid-library-schema --out generated/flake.nix\n  leanix render-invalid-formatter-schema --out generated/flake.nix\n  leanix render-invalid-multi-app-schema --out generated/flake.nix\n  leanix render-invalid-build-plan-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-input-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-args --out generated/flake.nix\n  leanix render-invalid-typed-text-ref --out generated/flake.nix\n  leanix render-invalid-typed-check-ref --out generated/flake.nix\n  leanix render-invalid-duplicate-package-env --out generated/flake.nix\n  leanix render-invalid-duplicate-shell-env --out generated/flake.nix\n  leanix render-invalid-unsupported-env-builder --out generated/flake.nix\n  leanix render-invalid-multi-system-schema --out generated/flake.nix\n  leanix render-invalid-source-missing-hash --out generated/flake.nix"
 
 partial def startsWithChars : List Char -> List Char -> Bool
   | [], _ => true
@@ -203,6 +203,7 @@ def verifyShowcaseArtifact (artifactDir : String) : IO (Except String Unit) := d
                       requireSubstring "manifest packages" manifest "\"helloWrapper\"",
                       requireSubstring "manifest packages" manifest "\"helloTool\"",
                       requireSubstring "manifest apps/checks" manifest "\"packageName\": \"helloWrapper\"",
+                      requireSubstring "manifest escape policy" manifest "\"escapePolicy\": \"strict-artifact\"",
                       requireSubstring "manifest checked invariants" manifest "\"PackageClosure.refsResolve\"",
                       requireSubstring "manifest checked invariants" manifest "\"PackageClosure.acyclicByFuel\"",
                       requireSubstring "manifest checked invariants" manifest "\"CliProject.appPointsAtPackage\"",
@@ -251,6 +252,18 @@ def renderExceptToFile {error : Type} [ToString error] (flake : Except error Lea
 
 def emitShowcaseArtifact (outputDir : String) : IO UInt32 := do
   match Leanix.renderShowcaseArtifact with
+  | .ok (renderedFlake, manifest) =>
+      IO.FS.createDirAll outputDir
+      IO.FS.writeFile (System.FilePath.mk outputDir / "flake.nix") renderedFlake
+      IO.FS.writeFile (System.FilePath.mk outputDir / "leanix.manifest.json") manifest
+      IO.println s!"wrote {outputDir}"
+      pure 0
+  | .error error =>
+      IO.eprintln s!"error: {error}"
+      pure 1
+
+def emitRawCheckArtifact (outputDir : String) : IO UInt32 := do
+  match Leanix.renderRawCheckArtifact with
   | .ok (renderedFlake, manifest) =>
       IO.FS.createDirAll outputDir
       IO.FS.writeFile (System.FilePath.mk outputDir / "flake.nix") renderedFlake
@@ -341,6 +354,8 @@ def main (args : List String) : IO UInt32 := do
       emitShowcaseArtifact outputDir
   | ["emit-showcase-artifact", "--out", outputDir] =>
       emitShowcaseArtifact outputDir
+  | ["emit-raw-check-artifact", "--out", outputDir] =>
+      emitRawCheckArtifact outputDir
   | ["verify-artifact", artifactDir] =>
       verifyArtifact artifactDir
   | _ =>

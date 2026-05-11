@@ -152,10 +152,10 @@ artifact. The directory contains:
 - `flake.nix`, the Nix backend artifact
 - `leanix.manifest.json`, a machine-readable manifest
 
-The manifest records the renderer version, source reference, generated files,
-file hashes, systems, inputs, source trust classes, pin policies, pin metadata,
-packages, app/check package references, checked invariant names, and replay
-commands.
+The manifest records the renderer version, active escape policy, source
+reference, generated files, file hashes, systems, inputs, source trust classes,
+pin policies, pin metadata, packages, app/check package references, checked
+invariant names, and replay commands.
 
 The current artifact is proof-carrying in a deliberately narrow sense. Lean
 checks schema invariants, package closure, finite acyclicity, source trust
@@ -238,6 +238,14 @@ Raw text and shell remain as explicit escape hatches in five places:
 Those escape hatches are part of the prototype boundary, not the desired long
 term source of build semantics.
 
+Escape-hatch validation is policy-driven. The default development policy keeps
+these raw forms usable so existing examples remain ergonomic. Strict artifact
+policy is applied before proof-carrying artifact emission and rejects raw shell
+checks plus raw build-script forms such as `BuildExpr.runCommand`,
+`BuildStep.installExecutableScript`, `BuildStep.writeFile`, and
+`BuildStep.run`. This reduces the artifact trust surface; it does not prove the
+behavior of external programs that typed commands invoke.
+
 ## CLI
 
 `lake exe leanix` exposes the PoC commands (`Main.lean`):
@@ -261,6 +269,7 @@ term source of build semantics.
 - `leanix render-self --source URL --out FILE` — the self-check flake
 - `leanix emit-artifact --out DIR` — proof-carrying showcase artifact
 - `leanix emit-showcase-artifact --out DIR` — explicit showcase artifact alias
+- `leanix emit-raw-check-artifact --out DIR` — negative strict-policy fixture
 - `leanix verify-artifact DIR` — replay the current showcase artifact contract
 - `leanix render-invalid-cli-schema --out FILE`
 - `leanix render-invalid-formatter-schema --out FILE`

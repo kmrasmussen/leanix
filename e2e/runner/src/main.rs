@@ -1131,6 +1131,12 @@ fn main() -> Result<(), String> {
                 "error: MultiSystemCliProject aarch64-linux invalid: CliProject app must point at the project package",
         },
         InvalidCase {
+            name: "strict artifact raw check policy",
+            render_arg: "emit-raw-check-artifact",
+            expected_stderr:
+                "error: strict-artifact policy rejects raw escape hatch in check default: raw shell command",
+        },
+        InvalidCase {
             name: "source input missing hash",
             render_arg: "render-invalid-source-missing-hash",
             expected_stderr: "error: source input unhashedSrc must have a narHash",

@@ -44,6 +44,15 @@ inductive Input where
   | impureLocalSource : String -> Input
   deriving Repr, BEq
 
+inductive EscapePolicy where
+  | development
+  | strictArtifact
+  deriving Repr, BEq, DecidableEq
+
+def EscapePolicy.toString : EscapePolicy -> String
+  | .development => "development"
+  | .strictArtifact => "strict-artifact"
+
 inductive BuildText where
   | literal : String -> BuildText
   | package : String -> BuildText

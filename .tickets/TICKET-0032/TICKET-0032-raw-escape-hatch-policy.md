@@ -71,5 +71,28 @@ raw graph escape hatches.
 - `docs/poc.md`
 - `blog/yyyy-mm-dd-hh-mm-raw-escape-hatch-policy.md`
 
+## Plan
+- Add an explicit development versus strict-artifact escape policy.
+- Keep development validation compatible with existing raw shell/text examples.
+- Apply strict-artifact policy before proof-carrying artifact emission and
+  record the active policy in the manifest.
+- Move the showcase artifact check to a typed command so strict policy can pass
+  for the main artifact.
+- Add an exact-stderr e2e case proving strict policy rejects a raw shell check.
+- Update docs and add a dated blog note.
+
 ## Progress
-- Not started.
+- Added `EscapePolicy` with `development` and `strict-artifact` modes.
+- Added strict-policy validation for raw check commands plus raw build-script
+  escape hatches: `BuildExpr.runCommand`,
+  `BuildStep.installExecutableScript`, `BuildStep.writeFile`, and
+  `BuildStep.run`.
+- Applied strict policy in proof-carrying artifact emission and recorded
+  `"escapePolicy": "strict-artifact"` in artifact manifests.
+- Migrated the showcase artifact check to `CheckCommand.packageExecutableToOutput`.
+- Added `emit-raw-check-artifact --out DIR` as a negative fixture and e2e
+  exact-stderr coverage for the strict raw-check rejection.
+- Updated PoC docs and artifact fixture manifest.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

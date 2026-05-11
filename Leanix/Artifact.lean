@@ -29,6 +29,7 @@ structure ArtifactReference where
 structure ArtifactManifest where
   formatVersion : Nat
   rendererVersion : String
+  escapePolicy : EscapePolicy
   sourceRef : String
   generatedFiles : List String
   fileHashes : List String
@@ -145,6 +146,7 @@ def ArtifactManifest.toJson (manifest : ArtifactManifest) : String :=
     "{",
     "  " ++ jsonField "formatVersion" (toString manifest.formatVersion) ++ ",",
     "  " ++ jsonField "rendererVersion" (jsonString manifest.rendererVersion) ++ ",",
+    "  " ++ jsonField "escapePolicy" (jsonString manifest.escapePolicy.toString) ++ ",",
     "  " ++ jsonField "sourceRef" (jsonString manifest.sourceRef) ++ ","
   ] ++
   indentLines "  " (jsonArrayField "generatedFiles" (jsonStringArray manifest.generatedFiles) true) ++
@@ -227,6 +229,7 @@ def checkArtifact (check : Check system) : ArtifactReference := {
 def showcaseArtifactManifest (renderedFlake : String) : ArtifactManifest := {
   formatVersion := 1
   rendererVersion := "leanix-poc-1"
+  escapePolicy := .strictArtifact
   sourceRef := "examples/proof-carrying-cli-closure/source.lean"
   generatedFiles := ["flake.nix", "leanix.manifest.json"]
   fileHashes := ["flake.nix " ++ contentHash renderedFlake]
@@ -245,7 +248,8 @@ def showcaseArtifactManifest (renderedFlake : String) : ArtifactManifest := {
     "CliProject.appPointsAtPackage",
     "CliProject.checkPointsAtPackage",
     "CliProject.devShellContainsPackage",
-    "sourceTrust.fetchLikeSourcesRequireHash"
+    "sourceTrust.fetchLikeSourcesRequireHash",
+    "escapePolicy.strictArtifact"
   ]
   replayCommands := [
     "lake env lean examples/proof-carrying-cli-closure/source.lean",
@@ -263,6 +267,21 @@ def renderShowcaseArtifact : Except String (String × String) := do
         [("nixpkgs", Examples.pinnedNixpkgsInput)] validatedSchema with
     | .ok validatedFlake => pure validatedFlake
     | .error error => throw error.toString
+  match validateFlakeWithPolicy .strictArtifact validatedFlake.flake with
+  | .ok _ => pure ()
+  | .error error => throw error.toString
+  let renderedFlake ← renderFlake validatedFlake
+  pure (renderedFlake, (showcaseArtifactManifest renderedFlake).toJson)
+
+def renderRawCheckArtifact : Except String (String × String) := do
+  let validatedFlake ←
+    match Flake.fromSchema "Leanix raw-check artifact policy example"
+        [("nixpkgs", Examples.pinnedNixpkgsInput)] Examples.rawCheckArtifactProject with
+    | .ok validatedFlake => pure validatedFlake
+    | .error error => throw error
+  match validateFlakeWithPolicy .strictArtifact validatedFlake.flake with
+  | .ok _ => pure ()
+  | .error error => throw error.toString
   let renderedFlake ← renderFlake validatedFlake
   pure (renderedFlake, (showcaseArtifactManifest renderedFlake).toJson)
 

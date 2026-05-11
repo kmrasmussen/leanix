@@ -204,6 +204,43 @@ def validateBuildStepPackageRefs (system : System) (packageNames : List String) 
   | .run _ => pure ()
 end
 
+def rejectRawEscape (policy : EscapePolicy) (owner escape : String) : Except ValidateError Unit := do
+  match policy with
+  | .development => pure ()
+  | .strictArtifact => throw (.rawEscapeRejected policy owner escape)
+
+mutual
+def validateBuildExprPolicy (policy : EscapePolicy) (owner : String) :
+    BuildExpr -> Except ValidateError Unit
+  | .nixpkgs _ => pure ()
+  | .inputPath _ => pure ()
+  | .package _ => pure ()
+  | .runCommand name nativeBuildInputs _ => do
+      rejectRawEscape policy owner s!"runCommand {name}"
+      for input in nativeBuildInputs do
+        validateBuildExprPolicy policy owner input
+  | .runSteps _ nativeBuildInputs steps => do
+      for input in nativeBuildInputs do
+        validateBuildExprPolicy policy owner input
+      for step in steps do
+        validateBuildStepPolicy policy owner step
+
+def validateBuildStepPolicy (policy : EscapePolicy) (owner : String) :
+    BuildStep -> Except ValidateError Unit
+  | .copySource source _ => validateBuildExprPolicy policy owner source
+  | .installTextFile _ _ => pure ()
+  | .installExecutableScript path _ =>
+      rejectRawEscape policy owner s!"installExecutableScript {path}"
+  | .installExecutableTextScript _ _ => pure ()
+  | .buildLeanProject _ => pure ()
+  | .mkdir _ => pure ()
+  | .copyFile _ _ => pure ()
+  | .writeFile path _ => rejectRawEscape policy owner s!"writeFile {path}"
+  | .writeTextFile _ _ => pure ()
+  | .chmodExecutable _ => pure ()
+  | .run command => rejectRawEscape policy owner s!"run step {command}"
+end
+
 def checkCommandPackageRefs : CheckCommand -> List String
   | .rawShell _ => []
   | .packageExecutableToOutput command => [command.packageName]
@@ -223,6 +260,13 @@ def validateCheckCommandInputRefs (inputNames : List String) (command : CheckCom
     Except ValidateError Unit := do
   for inputName in checkCommandInputRefs command do
     validateInputRef inputNames inputName
+
+def validateCheckCommandPolicy (policy : EscapePolicy) (owner : String)
+    (command : CheckCommand) : Except ValidateError Unit := do
+  match command with
+  | .rawShell _ => rejectRawEscape policy owner "raw shell command"
+  | .packageExecutableToOutput _ => pure ()
+  | .inputPathExists _ => pure ()
 
 def findPackageByName? (packages : List (Package system)) (name : String) :
     Option (Package system) :=
@@ -351,7 +395,8 @@ def checkPackageGraph (system : System) (packages : List (Package system)) :
   else
     throw (.missingPackageRef system "package graph" "unknown")
 
-def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateError Unit := do
+def validateSystemOutputsWithPolicy (policy : EscapePolicy) (flake : Flake) (system : System) :
+    Except ValidateError Unit := do
   let packages := flake.outputs.packages system
   let apps := flake.outputs.apps system
   let devShells := flake.outputs.devShells system
@@ -367,6 +412,7 @@ def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateErr
 
   for package in packages do
     validateBuildExprInputRefs inputNames package.build
+    validateBuildExprPolicy policy s!"package {package.name}" package.build
 
   let _checkedPackages ← checkPackageGraph system packages
 
@@ -385,11 +431,15 @@ def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateErr
     validatePackageRef system packageNames s!"check {check.name}" check.packageName
     validateCheckCommandPackageRefs system packageNames s!"check command {check.name}" check.command
     validateCheckCommandInputRefs inputNames check.command
+    validateCheckCommandPolicy policy s!"check {check.name}" check.command
 
   match formatter? with
   | none => pure ()
   | some formatter =>
       validatePackageRef system packageNames "formatter" formatter.packageName
+
+def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateError Unit :=
+  validateSystemOutputsWithPolicy .development flake system
 
 def validateInput (name : String) (input : Input) : Except ValidateError Unit := do
   match input with
@@ -401,7 +451,7 @@ def validateInput (name : String) (input : Input) : Except ValidateError Unit :=
       | some _ => pure ()
       | none => throw (.sourceInputMissingHash name)
 
-def validateFlake (flake : Flake) : Except ValidateError Unit := do
+def validateFlakeWithPolicy (policy : EscapePolicy) (flake : Flake) : Except ValidateError Unit := do
   if hasDuplicateString (flake.inputs.map (fun input => input.fst)) then
     throw .duplicateInputNames
   else
@@ -411,7 +461,10 @@ def validateFlake (flake : Flake) : Except ValidateError Unit := do
     validateInput input.fst input.snd
 
   for system in System.all do
-    validateSystemOutputs flake system
+    validateSystemOutputsWithPolicy policy flake system
+
+def validateFlake (flake : Flake) : Except ValidateError Unit :=
+  validateFlakeWithPolicy .development flake
 
 structure ValidatedFlake where
   flake : Flake

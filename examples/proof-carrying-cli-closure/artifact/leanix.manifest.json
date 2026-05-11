@@ -1,6 +1,7 @@
 {
   "formatVersion": 1,
   "rendererVersion": "leanix-poc-1",
+  "escapePolicy": "strict-artifact",
   "sourceRef": "examples/proof-carrying-cli-closure/source.lean",
   "generatedFiles": [
     "flake.nix",
@@ -54,7 +55,8 @@
     "CliProject.appPointsAtPackage",
     "CliProject.checkPointsAtPackage",
     "CliProject.devShellContainsPackage",
-    "sourceTrust.fetchLikeSourcesRequireHash"
+    "sourceTrust.fetchLikeSourcesRequireHash",
+    "escapePolicy.strictArtifact"
   ],
   "replayCommands": [
     "lake env lean examples/proof-carrying-cli-closure/source.lean",

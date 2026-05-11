@@ -682,11 +682,20 @@ def showcaseCliProject : CliProject .x86_64_linux where
   check := {
     name := "default"
     packageName := "helloWrapper"
-    command := "hello-wrapper > \"$out\""
+    command := .packageExecutableToOutput {
+      packageName := "helloWrapper"
+      executable := "hello-wrapper"
+    }
   }
 
 def showcaseValidatedSchema : Except SchemaError (ValidatedSchema (CliProject .x86_64_linux)) :=
   CliProject.validateChecked showcaseCliProject
+
+def rawCheckArtifactProject : CliProject .x86_64_linux where
+  package := helloPackage
+  app := { helloApp with name := "default" }
+  devShell := helloDevShell
+  check := { helloCheck with name := "default" }
 
 def showcaseFlake : Except String ValidatedFlake := do
   let validated ←
