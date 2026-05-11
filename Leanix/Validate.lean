@@ -103,6 +103,7 @@ def validateBuildExprInputRefs (inputNames : List String) : BuildExpr -> Except 
 
 def validateBuildStepInputRefs (inputNames : List String) : BuildStep -> Except ValidateError Unit
   | .copySource source _ => validateBuildExprInputRefs inputNames source
+  | .installTextFile _ content => validateBuildTextInputRefs inputNames content
   | .installExecutableScript _ _ => pure ()
   | .installExecutableTextScript _ content => validateBuildTextInputRefs inputNames content
   | .buildLeanProject _ => pure ()
@@ -141,6 +142,7 @@ def buildExprPackageRefsList : List BuildExpr -> List String
 
 def buildStepPackageRefs : BuildStep -> List String
   | .copySource source _ => buildExprPackageRefs source
+  | .installTextFile _ content => buildTextPackageRefs content
   | .installExecutableScript _ _ => []
   | .installExecutableTextScript _ content => buildTextPackageRefs content
   | .buildLeanProject _ => []
@@ -189,6 +191,7 @@ def validateBuildExprPackageRefs (system : System) (packageNames : List String) 
 def validateBuildStepPackageRefs (system : System) (packageNames : List String) (owner : String) :
     BuildStep -> Except ValidateError Unit
   | .copySource source _ => validateBuildExprPackageRefs system packageNames owner source
+  | .installTextFile _ content => validateBuildTextPackageRefs system packageNames owner content
   | .installExecutableScript _ _ => pure ()
   | .installExecutableTextScript _ content =>
       validateBuildTextPackageRefs system packageNames owner content

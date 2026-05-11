@@ -174,10 +174,14 @@ being inferred only from raw strings. The first typed identities are:
 - `BuildPlan.nixpkgsPackage`, backed by `KnownNixpkgsPackage`
 - `BuildPlan.executableTextWrapper`, backed by `ExecutableWrapperArgs`
 - `BuildPlan.copyInputTree`, backed by `CopyInputTreeArgs`
+- `BuildPlan.copyInputFile`, backed by `CopyInputFileArgs`
+- `BuildPlan.installTextFile`, backed by `InstallTextFileArgs`
 
-The wrapper and input-copy identities carry named argument structures. Current
-validation rejects duplicate executable-wrapper arguments and missing
-package/input references before lowering to the backend expression.
+The wrapper, source-copy, and text-file identities carry named argument
+structures. Current validation rejects duplicate executable-wrapper arguments
+and missing package/input references before lowering to the backend expression.
+`BuildPlan.installTextFile` can also carry typed `BuildText`, so package and
+input references inside planned file content are visible to validation.
 
 `BuildExpr` remains the current Nix backend representation. Rendering still
 works from `BuildExpr`, and `Package.fromBuildPlan` is the migration bridge from
@@ -193,6 +197,7 @@ validated alongside the check's primary package reference.
 operations that Leanix wants to reason about semantically:
 
 - copying a source expression into the build directory
+- installing a non-executable text file
 - copying a file path to another file path
 - installing an executable script
 - building a Lean project with `lake build`
@@ -223,6 +228,8 @@ term source of build semantics.
 - `leanix` — banner
 - `leanix render-example --out FILE` — typed `hello`
 - `leanix render-closure --out FILE` — typed package closure
+- `leanix render-build-plan-text-file --out FILE` — `BuildPlan.installTextFile`
+  lowered to a generated package
 - `leanix render-cli-schema --out FILE` — `CliProject` lowered to a flake
 - `leanix render-formatter-schema --out FILE` — `FormatterProject` lowered to
   `formatter.${system}`
@@ -243,6 +250,7 @@ term source of build semantics.
 - `leanix render-invalid-library-schema --out FILE`
 - `leanix render-invalid-multi-app-schema --out FILE`
 - `leanix render-invalid-multi-system-schema --out FILE`
+- `leanix render-invalid-build-plan-input-ref --out FILE`
 - `leanix render-invalid-missing-ref --out FILE`
 - `leanix render-invalid-cycle --out FILE`
 - `leanix render-invalid-source-missing-hash --out FILE`
@@ -266,7 +274,8 @@ asserts they exit non-zero.
    `render-library-schema` and `render-multi-app-schema` pin the newer schema
    vocabulary beyond the CLI default case. `render-formatter-schema` pins the
    first scalar output convention, where a typed package reference lowers to
-   `formatter.${system}`.
+   `formatter.${system}`. `render-build-plan-text-file` pins the
+   `BuildPlan.installTextFile` lowering path.
 2. For each invalid case: invoke `lake exe leanix`, assert non-zero exit, and
    compare exact stderr for the expected error class.
 3. For the showcase only: also `lake env lean` the standalone Lean excerpt at

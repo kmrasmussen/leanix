@@ -267,8 +267,53 @@ fn run_source_injection_case(repo: &Path) -> Result<(), String> {
     }
 }
 
+fn read_generated_output_file(
+    repo: &Path,
+    out_link: &str,
+    relative_file: &str,
+) -> Result<String, String> {
+    fs::read_to_string(repo.join(out_link).join(relative_file))
+        .map_err(|err| format!("failed reading {out_link}/{relative_file}: {err}"))
+}
+
+fn run_build_plan_text_file_case(repo: &Path) -> Result<(), String> {
+    let output = "generated/flake.nix";
+    let out_link = "generated/planned-text-file-result";
+    eprintln!("case: build plan text file");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "render-build-plan-text-file",
+            "--out",
+            output,
+        ],
+    )?;
+    compare_file(repo, output, "e2e/golden/build-plan-text-file.flake.nix")?;
+    run(repo, "nix", &["flake", "check", "path:./generated"])?;
+    run(
+        repo,
+        "nix",
+        &[
+            "build",
+            "path:./generated#plannedTextFile",
+            "--out-link",
+            out_link,
+        ],
+    )?;
+    let message = read_generated_output_file(repo, out_link, "message.txt")?;
+    if message == "hello from BuildPlan text file\n" {
+        Ok(())
+    } else {
+        Err(format!("planned text file content mismatch: {message:?}"))
+    }
+}
+
 fn run_hashed_source_case(repo: &Path) -> Result<(), String> {
     let output = "generated/flake.nix";
+    let out_link = "generated/source-fixture-result";
     let source = format!("path:{}", repo.join("e2e/source-fixture").display());
     eprintln!("case: hashed source input");
     run(
@@ -296,7 +341,22 @@ fn run_hashed_source_case(repo: &Path) -> Result<(), String> {
         }
     }
     run(repo, "nix", &["flake", "check", "path:./generated"])?;
-    Ok(())
+    run(
+        repo,
+        "nix",
+        &[
+            "build",
+            "path:./generated#sourceFixture",
+            "--out-link",
+            out_link,
+        ],
+    )?;
+    let message = read_generated_output_file(repo, out_link, "message.txt")?;
+    if message == "leanix source fixture\n" {
+        Ok(())
+    } else {
+        Err(format!("source fixture content mismatch: {message:?}"))
+    }
 }
 
 fn require_json_fragment(json: &str, context: &str, fragment: &str) -> Result<(), String> {
@@ -831,6 +891,11 @@ fn main() -> Result<(), String> {
                 "error: build plan plannedBroken for x86_64-linux refers to missing package missingPlanDep",
         },
         InvalidCase {
+            name: "build plan missing input reference",
+            render_arg: "render-invalid-build-plan-input-ref",
+            expected_stderr: "error: build expression refers to missing input missingFixtureSrc",
+        },
+        InvalidCase {
             name: "duplicate build plan arguments",
             render_arg: "render-invalid-build-plan-args",
             expected_stderr:
@@ -895,6 +960,7 @@ fn main() -> Result<(), String> {
     run_artifact_case(&repo)?;
     run_artifact_policy_rejection_case(&repo)?;
     run_source_injection_case(&repo)?;
+    run_build_plan_text_file_case(&repo)?;
     run_hashed_source_case(&repo)?;
 
     for case in invalid_cases {

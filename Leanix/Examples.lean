@@ -121,13 +121,16 @@ def hashedSourceInput (url : String) : Input :=
     }
   }
 
-def sourceFixturePackage : Package .x86_64_linux where
-  name := "sourceFixture"
-  build := .runSteps "source-fixture" [] [
-    .copySource (.inputPath "fixtureSrc") "source",
-    .mkdir "$out",
-    .copyFile "source/message.txt" "$out/message.txt"
-  ]
+def sourceFixturePlan : BuildPlan :=
+  .copyInputFile {
+    derivationName := "source-fixture"
+    inputName := "fixtureSrc"
+    sourcePath := "message.txt"
+    destination := "$out/message.txt"
+  }
+
+def sourceFixturePackage : Package .x86_64_linux :=
+  Package.fromBuildPlan "sourceFixture" sourceFixturePlan
 
 def sourceFixtureCheck : Check .x86_64_linux where
   name := "sourceFixture"
@@ -436,6 +439,60 @@ def duplicateBuildPlanArgumentsFlake : Except String ValidatedFlake := do
       Flake.fromSchema "Leanix invalid build plan arguments example" [("nixpkgs", nixpkgsInput)]
         project
   | .error error => throw error.toString
+
+def missingInputBuildPlan : BuildPlan :=
+  .copyInputFile {
+    derivationName := "missing-input-copy"
+    inputName := "missingFixtureSrc"
+    sourcePath := "message.txt"
+    destination := "$out/message.txt"
+  }
+
+def missingInputBuildPlanFlake : Except String ValidatedFlake := do
+  match validateBuildPlanRefs .x86_64_linux [] ["missingInputCopy"]
+      "build plan missingInputCopy" missingInputBuildPlan with
+  | .ok _ =>
+      let package : Package .x86_64_linux :=
+        Package.fromBuildPlan "missingInputCopy" missingInputBuildPlan
+      let outputs : Outputs := {
+        packages
+          | .x86_64_linux => [package]
+          | _ => []
+        apps := fun _ => []
+        devShells := fun _ => []
+        checks := fun _ => []
+      }
+      match Flake.validateChecked {
+        description := "Leanix invalid build plan input example"
+        inputs := [("nixpkgs", nixpkgsInput)]
+        outputs := outputs
+      } with
+      | .ok validated => pure validated
+      | .error error => throw error.toString
+  | .error error => throw error.toString
+
+def plannedTextFilePlan : BuildPlan :=
+  .installTextFile {
+    derivationName := "planned-text-file"
+    destination := "$out/message.txt"
+    content := .literal "hello from BuildPlan text file\n"
+  }
+
+def plannedTextFilePackage : Package .x86_64_linux :=
+  Package.fromBuildPlan "plannedTextFile" plannedTextFilePlan
+
+def plannedTextFileOutputs : Outputs where
+  packages
+    | .x86_64_linux => [plannedTextFilePackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks := fun _ => []
+
+def plannedTextFileFlake : Flake where
+  description := "Leanix build plan text file example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := plannedTextFileOutputs
 
 def cyclePackageA : Package .x86_64_linux where
   name := "cycleA"

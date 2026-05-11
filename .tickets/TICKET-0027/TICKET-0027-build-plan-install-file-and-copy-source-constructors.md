@@ -70,4 +70,23 @@ named arguments, validation, and e2e coverage.
 - `blog/yyyy-mm-dd-hh-mm-build-plan-file-constructors.md`
 
 ## Progress
-- Not started.
+- Added `CopyInputFileArgs` and `BuildPlan.copyInputFile` for copying one file
+  out of a declared source input.
+- Added `InstallTextFileArgs` and `BuildPlan.installTextFile` for installing
+  typed text content into an output path.
+- Added `BuildStep.installTextFile` as the backend lowering target for planned
+  text-file installs.
+- Moved the hashed source fixture package from direct `BuildExpr.runSteps`
+  authoring to `BuildPlan.copyInputFile`.
+- Added `plannedTextFilePlan` and `render-build-plan-text-file` to exercise the
+  new text-file constructor.
+- Added `missingInputBuildPlanFlake` and
+  `render-invalid-build-plan-input-ref` to verify plan-level missing input
+  validation before rendering.
+- Added `e2e/golden/build-plan-text-file.flake.nix`.
+- Tightened e2e coverage to build and inspect the planned text-file package and
+  the migrated source-fixture package outputs.
+- Updated PoC docs, examples docs, and added a dated blog note.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

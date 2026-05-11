@@ -63,6 +63,7 @@ inductive BuildExpr where
 
 inductive BuildStep where
   | copySource : (source : BuildExpr) -> (destination : String) -> BuildStep
+  | installTextFile : (path : String) -> (content : BuildText) -> BuildStep
   | installExecutableScript : (path : String) -> (content : String) -> BuildStep
   | installExecutableTextScript : (path : String) -> (content : BuildText) -> BuildStep
   | buildLeanProject : (directory : String) -> BuildStep
@@ -98,11 +99,56 @@ structure CopyInputTreeArgs where
   destination : String
   deriving Repr, BEq
 
+structure CopyInputFileArgs where
+  derivationName : String
+  inputName : String
+  sourcePath : String
+  destination : String
+  deriving Repr, BEq
+
+structure InstallTextFileArgs where
+  derivationName : String
+  destination : String
+  content : BuildText
+  deriving Repr, BEq
+
 inductive BuildPlan where
   | nixpkgsPackage : KnownNixpkgsPackage -> BuildPlan
   | executableTextWrapper : ExecutableWrapperArgs -> BuildPlan
   | copyInputTree : CopyInputTreeArgs -> BuildPlan
+  | copyInputFile : CopyInputFileArgs -> BuildPlan
+  | installTextFile : InstallTextFileArgs -> BuildPlan
   deriving Repr, BEq
+
+namespace BuildText
+
+mutual
+def inputRefs : BuildText -> List String
+  | .literal _ => []
+  | .package _ => []
+  | .inputPath name => [name]
+  | .outPath => []
+  | .concat parts => inputRefsList parts
+
+def inputRefsList : List BuildText -> List String
+  | [] => []
+  | part :: rest => part.inputRefs ++ inputRefsList rest
+end
+
+mutual
+def packageRefs : BuildText -> List String
+  | .literal _ => []
+  | .package name => [name]
+  | .inputPath _ => []
+  | .outPath => []
+  | .concat parts => packageRefsList parts
+
+def packageRefsList : List BuildText -> List String
+  | [] => []
+  | part :: rest => part.packageRefs ++ packageRefsList rest
+end
+
+end BuildText
 
 namespace BuildPlan
 
@@ -120,11 +166,15 @@ def inputRefs : BuildPlan -> List String
   | .nixpkgsPackage _ => []
   | .executableTextWrapper _ => []
   | .copyInputTree args => [args.inputName]
+  | .copyInputFile args => [args.inputName]
+  | .installTextFile args => args.content.inputRefs
 
 def packageRefs : BuildPlan -> List String
   | .nixpkgsPackage _ => []
   | .executableTextWrapper args => [args.packageName]
   | .copyInputTree _ => []
+  | .copyInputFile _ => []
+  | .installTextFile args => args.content.packageRefs
 
 def toBuildExpr : BuildPlan -> BuildExpr
   | .nixpkgsPackage package => .nixpkgs package.toAttr
@@ -142,6 +192,16 @@ def toBuildExpr : BuildPlan -> BuildExpr
       .runSteps args.derivationName [] [
         .copySource (.inputPath args.inputName) args.destination,
         .run "touch \"$out\""
+      ]
+  | .copyInputFile args =>
+      .runSteps args.derivationName [] [
+        .copySource (.inputPath args.inputName) "source",
+        .mkdir "$out",
+        .copyFile ("source/" ++ args.sourcePath) args.destination
+      ]
+  | .installTextFile args =>
+      .runSteps args.derivationName [] [
+        .installTextFile args.destination args.content
       ]
 
 end BuildPlan

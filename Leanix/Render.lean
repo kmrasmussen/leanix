@@ -300,6 +300,9 @@ def renderBuildStepWithFuel (system : System) (fuel : Nat) : BuildStep -> Except
       pure <| "          cp -R ${" ++ renderedSource ++ "} " ++
         renderString destination ++ "\n" ++
         "          chmod -R u+w " ++ renderString destination
+  | .installTextFile path content =>
+      pure <| "          install -D -m644 ${pkgs.writeText " ++ renderString "leanix-file" ++ " " ++
+        renderBuildText system content ++ "} " ++ renderString path
   | .installExecutableScript path content =>
       pure <| "          install -D -m755 ${pkgs.writeText " ++ renderString "leanix-script" ++ " " ++
         renderStringAllowInterpolation content ++ "} " ++ renderString path

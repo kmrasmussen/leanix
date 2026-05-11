@@ -30,9 +30,14 @@ The closure and showcase examples now author `helloWrapper` through
 `helloWrapperPlan`, a `BuildPlan` that lowers to the same generated Nix as the
 previous direct `BuildExpr` version.
 
-That same closure path covers two typed builder identities: `helloToolPlan` is
-a known nixpkgs package identity, and `helloWrapperPlan` is an executable text
+That same closure path covers two typed builder identities: `helloToolPlan` is a
+known nixpkgs package identity, and `helloWrapperPlan` is an executable text
 wrapper with named arguments.
+
+`leanix render-build-plan-text-file --out generated/flake.nix` demonstrates
+`BuildPlan.installTextFile`. The hashed source fixture now uses
+`BuildPlan.copyInputFile`, so its source input reference is visible at the plan
+layer before lowering to structured backend steps.
 
 The closure check now uses a typed `CheckCommand.packageExecutableToOutput`
 instead of raw shell. The source fixture example also uses the structured
