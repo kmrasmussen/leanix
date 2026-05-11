@@ -7,7 +7,7 @@ repo_root="$(cd -- "$script_dir/../.." && pwd)"
 if [[ -n "${NIXPARSERLEAN_DIR:-}" ]]; then
   nixparserlean_dir="$NIXPARSERLEAN_DIR"
 else
-  nixparserlean_dir="$(cd -- "$repo_root/../nixparserlean" && pwd)"
+  nixparserlean_dir="$repo_root/../nixparserlean"
 fi
 
 if [[ ! -f "$nixparserlean_dir/lakefile.lean" ]]; then
@@ -15,6 +15,8 @@ if [[ ! -f "$nixparserlean_dir/lakefile.lean" ]]; then
   echo "set NIXPARSERLEAN_DIR=/path/to/nixparserlean to override" >&2
   exit 1
 fi
+
+nixparserlean_dir="$(cd -- "$nixparserlean_dir" && pwd)"
 
 out_dir="$repo_root/generated/interop-nixparserlean"
 mkdir -p "$out_dir"
