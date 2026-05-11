@@ -40,6 +40,7 @@ To emit the proof-carrying artifact directly:
 
 ```sh
 nix develop -c lake exe leanix emit-artifact --out generated/showcase-artifact
+nix develop -c lake exe leanix verify-artifact generated/showcase-artifact
 nix flake check path:./generated/showcase-artifact
 ```
 
@@ -70,6 +71,12 @@ The expected proof-carrying artifact files are:
 
 ```text
 examples/proof-carrying-cli-closure/artifact/
+```
+
+They can be checked directly with:
+
+```sh
+nix develop -c lake exe leanix verify-artifact examples/proof-carrying-cli-closure/artifact
 ```
 
 The generated flake is an artifact. The source of truth is the Lean value.

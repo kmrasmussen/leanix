@@ -122,11 +122,15 @@ references, checked invariant names, and replay commands.
 The current artifact is proof-carrying in a deliberately narrow sense. Lean
 checks schema invariants, package closure, finite acyclicity, source trust
 requirements, and graph validation before emitting the artifact. The checked
-flake carries the validation witness to the render boundary. Rust replays the
-artifact contract by reading the manifest, checking that files exist, checking
-package/reference declarations against `flake.nix`, and running the replay
-commands it owns. Nix remains the external witness for evaluating and building
-the rendered flake; Leanix does not claim to prove Nix evaluation.
+flake carries the validation witness to the render boundary.
+
+`leanix verify-artifact DIR` replays the current showcase artifact contract:
+it checks that the manifest and `flake.nix` exist, checks the expected systems,
+packages, app/check references, default package alias, and invariant names, and
+then runs the declared source elaboration and `nix flake check path:.` replay.
+The Rust e2e harness calls that same verifier path. Nix remains the external
+witness for evaluating and building the rendered flake; Leanix does not claim
+to prove Nix evaluation.
 
 ## Builder Boundary
 
@@ -169,6 +173,7 @@ term source of build semantics.
 - `leanix render-self --source URL --out FILE` — the self-check flake
 - `leanix emit-artifact --out DIR` — proof-carrying showcase artifact
 - `leanix emit-showcase-artifact --out DIR` — explicit showcase artifact alias
+- `leanix verify-artifact DIR` — replay the current showcase artifact contract
 - `leanix render-invalid-cli-schema --out FILE`
 - `leanix render-invalid-missing-ref --out FILE`
 - `leanix render-invalid-cycle --out FILE`

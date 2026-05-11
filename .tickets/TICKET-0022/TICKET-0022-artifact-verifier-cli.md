@@ -32,3 +32,25 @@ verifier layer.
 3. The Rust e2e harness calls the same verifier path.
 4. Artifact docs explain what verification checks locally and what remains
    delegated to Nix.
+
+## Plan
+1. Add a narrow `leanix verify-artifact DIR` command for the current showcase
+   artifact format.
+2. Have the command check manifest/file/package/reference/invariant facts and
+   run the replay commands Leanix owns today.
+3. Replace the Rust harness's private manifest verifier with calls to the CLI
+   verifier.
+4. Add direct positive and negative verification runs before marking complete.
+
+## Progress
+- Added `leanix verify-artifact DIR`.
+- The verifier checks the current showcase artifact files, expected package and
+  invariant facts, default package alias, and replay commands.
+- The Rust e2e harness now calls the verifier for both generated and committed
+  showcase artifacts.
+- Documented the verifier in the PoC and showcase docs.
+- Verified the committed showcase artifact directly.
+- Verified a negative copied artifact fails when an expected invariant is
+  removed.
+- Verified the full Rust e2e harness passes with the verifier in the artifact
+  case.

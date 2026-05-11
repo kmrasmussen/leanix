@@ -119,165 +119,6 @@ fn compare_file(repo: &Path, actual: &str, expected: &str) -> Result<(), String>
     }
 }
 
-fn extract_json_section<'a>(manifest: &'a str, field: &str) -> Result<&'a str, String> {
-    let marker = format!("\"{}\":", field);
-    let marker_index = manifest
-        .find(&marker)
-        .ok_or_else(|| format!("manifest missing field '{field}'"))?;
-    let after_marker = &manifest[marker_index + marker.len()..];
-    let bracket_offset = after_marker
-        .find('[')
-        .ok_or_else(|| format!("manifest field '{field}' is not an array"))?;
-    let section_start = marker_index + marker.len() + bracket_offset;
-    let mut depth = 0usize;
-    let mut in_string = false;
-    let mut escaped = false;
-
-    for (offset, ch) in manifest[section_start..].char_indices() {
-        if in_string {
-            if escaped {
-                escaped = false;
-            } else if ch == '\\' {
-                escaped = true;
-            } else if ch == '"' {
-                in_string = false;
-            }
-            continue;
-        }
-
-        match ch {
-            '"' => in_string = true,
-            '[' => depth += 1,
-            ']' => {
-                depth -= 1;
-                if depth == 0 {
-                    let inner_start = section_start + 1;
-                    let inner_end = section_start + offset;
-                    return Ok(&manifest[inner_start..inner_end]);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    Err(format!("manifest field '{field}' has no closing array"))
-}
-
-fn extract_json_strings(section: &str) -> Vec<String> {
-    let mut values = Vec::new();
-    let mut current = String::new();
-    let mut in_string = false;
-    let mut escaped = false;
-
-    for ch in section.chars() {
-        if in_string {
-            if escaped {
-                current.push(ch);
-                escaped = false;
-            } else if ch == '\\' {
-                escaped = true;
-            } else if ch == '"' {
-                values.push(current.clone());
-                current.clear();
-                in_string = false;
-            } else {
-                current.push(ch);
-            }
-        } else if ch == '"' {
-            in_string = true;
-        }
-    }
-
-    values
-}
-
-fn extract_object_string_values(section: &str, field: &str) -> Vec<String> {
-    let strings = extract_json_strings(section);
-    let mut values = Vec::new();
-    let mut iter = strings.iter();
-
-    while let Some(item) = iter.next() {
-        if item == field {
-            if let Some(value) = iter.next() {
-                values.push(value.clone());
-            }
-        }
-    }
-
-    values
-}
-
-fn require_contains(values: &[String], expected: &str, context: &str) -> Result<(), String> {
-    if values.iter().any(|value| value == expected) {
-        Ok(())
-    } else {
-        Err(format!("{context} missing '{expected}'"))
-    }
-}
-
-fn verify_artifact_manifest(repo: &Path, artifact_dir: &str) -> Result<(), String> {
-    let artifact_path = repo.join(artifact_dir);
-    let manifest = fs::read_to_string(artifact_path.join("leanix.manifest.json"))
-        .map_err(|err| format!("failed reading artifact manifest: {err}"))?;
-    let flake = fs::read_to_string(artifact_path.join("flake.nix"))
-        .map_err(|err| format!("failed reading artifact flake: {err}"))?;
-
-    let generated_files = extract_json_strings(extract_json_section(&manifest, "generatedFiles")?);
-    for file in &generated_files {
-        if !artifact_path.join(file).is_file() {
-            return Err(format!("manifest generated file '{file}' is missing"));
-        }
-    }
-
-    let systems = extract_json_strings(extract_json_section(&manifest, "systems")?);
-    require_contains(&systems, "x86_64-linux", "manifest systems")?;
-
-    let input_trust_classes =
-        extract_object_string_values(extract_json_section(&manifest, "inputs")?, "trustClass");
-    require_contains(
-        &input_trust_classes,
-        "lockfile-backed-flake-input",
-        "manifest input trust classes",
-    )?;
-
-    let package_section = extract_json_section(&manifest, "packages")?;
-    let packages = extract_object_string_values(package_section, "name");
-    require_contains(&packages, "helloWrapper", "manifest packages")?;
-    require_contains(&packages, "helloTool", "manifest packages")?;
-    for package in &packages {
-        let package_line = format!("        \"{}\" =", package);
-        if !flake.contains(&package_line) {
-            return Err(format!(
-                "manifest package '{package}' is missing from artifact flake"
-            ));
-        }
-    }
-
-    for section in ["apps", "checks"] {
-        let references =
-            extract_object_string_values(extract_json_section(&manifest, section)?, "packageName");
-        for package in references {
-            if !packages.contains(&package) {
-                return Err(format!(
-                    "manifest {section} reference points at undeclared package '{package}'"
-                ));
-            }
-        }
-    }
-
-    let invariants = extract_json_strings(extract_json_section(&manifest, "checkedInvariants")?);
-    for invariant in [
-        "PackageClosure.refsResolve",
-        "PackageClosure.acyclicByFuel",
-        "CliProject.appPointsAtPackage",
-        "sourceTrust.fetchLikeSourcesRequireHash",
-    ] {
-        require_contains(&invariants, invariant, "manifest checked invariants")?;
-    }
-
-    Ok(())
-}
-
 fn run_artifact_case(repo: &Path) -> Result<(), String> {
     let artifact_dir = "generated/showcase-artifact";
     eprintln!("case: proof-carrying flake artifact");
@@ -296,7 +137,21 @@ fn run_artifact_case(repo: &Path) -> Result<(), String> {
         "generated/showcase-artifact/leanix.manifest.json",
         "examples/proof-carrying-cli-closure/artifact/leanix.manifest.json",
     )?;
-    verify_artifact_manifest(repo, artifact_dir)?;
+    run(
+        repo,
+        "lake",
+        &["exe", "leanix", "verify-artifact", artifact_dir],
+    )?;
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "verify-artifact",
+            "examples/proof-carrying-cli-closure/artifact",
+        ],
+    )?;
     run(
         repo,
         "nix",
