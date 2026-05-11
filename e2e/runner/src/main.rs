@@ -710,6 +710,13 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/multi-system.flake.nix"),
         },
         Case {
+            name: "multi-system schema flake",
+            render_arg: "render-multi-system-schema",
+            source_arg: false,
+            lean_source: None,
+            golden: Some("e2e/golden/multi-system-schema.flake.nix"),
+        },
+        Case {
             name: "pinned flake input",
             render_arg: "render-pinned-inputs",
             source_arg: false,
@@ -763,6 +770,12 @@ fn main() -> Result<(), String> {
             name: "invalid CLI schema",
             render_arg: "render-invalid-cli-schema",
             expected_stderr: "error: CliProject app must point at the project package",
+        },
+        InvalidCase {
+            name: "invalid multi-system schema",
+            render_arg: "render-invalid-multi-system-schema",
+            expected_stderr:
+                "error: MultiSystemCliProject aarch64-linux invalid: CliProject app must point at the project package",
         },
         InvalidCase {
             name: "source input missing hash",

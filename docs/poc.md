@@ -169,12 +169,15 @@ term source of build semantics.
 - `leanix render-closure --out FILE` — typed package closure
 - `leanix render-cli-schema --out FILE` — `CliProject` lowered to a flake
 - `leanix render-showcase --out FILE` — proof-carrying CLI closure showcase
-- `leanix render-multi-system --out FILE` — two active systems
+- `leanix render-multi-system --out FILE` — graph-level two-system flake
+- `leanix render-multi-system-schema --out FILE` — schema-authored two-system
+  CLI project
 - `leanix render-self --source URL --out FILE` — the self-check flake
 - `leanix emit-artifact --out DIR` — proof-carrying showcase artifact
 - `leanix emit-showcase-artifact --out DIR` — explicit showcase artifact alias
 - `leanix verify-artifact DIR` — replay the current showcase artifact contract
 - `leanix render-invalid-cli-schema --out FILE`
+- `leanix render-invalid-multi-system-schema --out FILE`
 - `leanix render-invalid-missing-ref --out FILE`
 - `leanix render-invalid-cycle --out FILE`
 - `leanix render-invalid-source-missing-hash --out FILE`
@@ -191,8 +194,10 @@ asserts they exit non-zero.
    `e2e/golden/*.flake.nix`; then run `nix flake check path:./generated`.
    The showcase also golden-compares against
    `examples/proof-carrying-cli-closure/expected.flake.nix`. The
-   `render-multi-system` case pins a flake with both `x86_64-linux` and
-   `aarch64-linux` package outputs.
+   `render-multi-system` case pins the graph-level output shape with both
+   `x86_64-linux` and `aarch64-linux` package outputs. The
+   `render-multi-system-schema` case pins the schema-level authoring path,
+   where one logical CLI project lowers into those per-system outputs.
 2. For each invalid case: invoke `lake exe leanix`, assert non-zero exit, and
    compare exact stderr for the expected error class.
 3. For the showcase only: also `lake env lean` the standalone Lean excerpt at

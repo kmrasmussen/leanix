@@ -40,6 +40,8 @@ inductive SchemaError where
   | cliProjectAppMissingPackage
   | cliProjectCheckMissingPackage
   | cliProjectDevShellMissingPackage
+  | multiSystemNeedsTwoSystems
+  | multiSystemSystemInvalid : (system : System) -> (error : String) -> SchemaError
   deriving Repr, BEq
 
 def SchemaError.toString : SchemaError -> String
@@ -49,6 +51,9 @@ def SchemaError.toString : SchemaError -> String
   | .cliProjectAppMissingPackage => "CliProject app must point at the project package"
   | .cliProjectCheckMissingPackage => "CliProject check must point at the project package"
   | .cliProjectDevShellMissingPackage => "CliProject devShell must include the project package"
+  | .multiSystemNeedsTwoSystems => "MultiSystemCliProject must include at least two active systems"
+  | .multiSystemSystemInvalid system error =>
+      s!"MultiSystemCliProject {system.toNixString} invalid: {error}"
 
 instance : ToString SchemaError where
   toString := SchemaError.toString

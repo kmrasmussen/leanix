@@ -12,4 +12,7 @@ explains how to run notable examples and what each one demonstrates.
   typed package closure and uses structured build steps.
 
 The CLI also exposes `leanix render-multi-system --out generated/flake.nix`,
-which demonstrates the renderer's current multi-system output shape.
+which demonstrates the renderer's current graph-level multi-system output
+shape, and `leanix render-multi-system-schema --out generated/flake.nix`,
+which demonstrates the typed authoring path for one CLI project across two
+systems.

@@ -430,6 +430,70 @@ def multiSystemFlake : Flake where
   inputs := [("nixpkgs", nixpkgsInput)]
   outputs := multiSystemOutputs
 
+def multiLinuxApp : App .x86_64_linux where
+  name := "default"
+  packageName := "hello"
+  program := "bin/hello"
+
+def multiAarch64App : App .aarch64_linux where
+  name := "default"
+  packageName := "hello"
+  program := "bin/hello"
+
+def multiLinuxDevShell : DevShell .x86_64_linux where
+  name := "default"
+  packageNames := ["hello"]
+
+def multiAarch64DevShell : DevShell .aarch64_linux where
+  name := "default"
+  packageNames := ["hello"]
+
+def multiLinuxCheck : Check .x86_64_linux where
+  name := "default"
+  packageName := "hello"
+  command := "hello --version > \"$out\""
+
+def multiAarch64Check : Check .aarch64_linux where
+  name := "default"
+  packageName := "hello"
+  command := "hello --version > \"$out\""
+
+def multiLinuxCliProject : CliProject .x86_64_linux where
+  package := multiLinuxPackage
+  app := multiLinuxApp
+  devShell := multiLinuxDevShell
+  check := multiLinuxCheck
+
+def multiAarch64CliProject : CliProject .aarch64_linux where
+  package := multiAarch64Package
+  app := multiAarch64App
+  devShell := multiAarch64DevShell
+  check := multiAarch64Check
+
+def multiSystemCliProject : MultiSystemCliProject where
+  name := "hello"
+  x86_64Linux := some multiLinuxCliProject
+  aarch64Linux := some multiAarch64CliProject
+
+def multiSystemSchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix multi-system CLI schema example" [("nixpkgs", nixpkgsInput)]
+    multiSystemCliProject
+
+def brokenMultiAarch64CliProject : CliProject .aarch64_linux where
+  package := multiAarch64Package
+  app := { multiAarch64App with packageName := "missing" }
+  devShell := multiAarch64DevShell
+  check := multiAarch64Check
+
+def brokenMultiSystemCliProject : MultiSystemCliProject where
+  name := "broken"
+  x86_64Linux := some multiLinuxCliProject
+  aarch64Linux := some brokenMultiAarch64CliProject
+
+def brokenMultiSystemSchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix invalid multi-system CLI schema example" [("nixpkgs", nixpkgsInput)]
+    brokenMultiSystemCliProject
+
 def helloCliProject : CliProject .x86_64_linux where
   package := helloPackage
   app := { helloApp with name := "default" }

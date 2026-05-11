@@ -23,8 +23,10 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   and `ValidatedSchema` boundary (`Leanix/Schema.lean`).
 - ✅ Synthetic default packages render as aliases to the first named package,
   matching the default-app shape.
-- ⬜ Schemas other than `CliProject` (libraries, multi-app projects, multi-system
-  projects).
+- ✅ `MultiSystemCliProject` groups per-system `CliProject` values under one
+  logical project name, validates each active system, and lowers to a
+  `ValidatedFlake` with at least two active systems.
+- ⬜ Schemas other than CLI projects (libraries and multi-app projects).
 
 ## Phase 2: Reproducibility Model — 🟡
 
@@ -46,6 +48,10 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   `examples/proof-carrying-cli-closure/expected.flake.nix`.
 - ✅ Renderer emits one output block per active system. The e2e harness covers
   a two-system package flake.
+- ✅ Schema-level multi-system authoring is distinct from graph-level
+  multi-system rendering: the renderer can emit any checked multi-system graph,
+  while `MultiSystemCliProject` is the current typed authoring schema for one
+  logical CLI project across systems.
 - ✅ Build-expression depth exhaustion is reported as a Lean render error, not
   embedded as a generated Nix `throw`.
 - ⬜ Read parsed Nix from `nixparserlean` for comparison.
