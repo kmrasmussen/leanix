@@ -709,5 +709,25 @@ def brokenMultiAppSchemaFlake : Except String ValidatedFlake :=
   Flake.fromSchema "Leanix invalid multi-app schema example" [("nixpkgs", nixpkgsInput)]
     brokenMultiAppProject
 
+def formatterProject : FormatterProject .x86_64_linux where
+  packages := [helloToolPackage]
+  formatter := {
+    packageName := "helloTool"
+  }
+
+def formatterSchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix formatter schema example" [("nixpkgs", nixpkgsInput)]
+    formatterProject
+
+def brokenFormatterProject : FormatterProject .x86_64_linux where
+  packages := [helloToolPackage]
+  formatter := {
+    packageName := "missingFormatter"
+  }
+
+def brokenFormatterSchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix invalid formatter schema example" [("nixpkgs", nixpkgsInput)]
+    brokenFormatterProject
+
 end Examples
 end Leanix

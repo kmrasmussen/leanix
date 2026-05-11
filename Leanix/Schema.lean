@@ -353,6 +353,75 @@ instance : FlakeSchema (MultiAppProject system) where
   validate := MultiAppProject.validate
   Valid := MultiAppProject.Valid
 
+structure FormatterProject (system : System) where
+  packages : List (Package system)
+  formatter : Formatter system
+  deriving Repr, BEq
+
+def FormatterProject.packageNames (project : FormatterProject system) : List String :=
+  schemaPackageNames project.packages
+
+def FormatterProject.formatterRefResolvesBool (project : FormatterProject system) : Bool :=
+  project.packageNames.contains project.formatter.packageName
+
+structure FormatterProject.Valid (project : FormatterProject system) : Prop where
+  formatterRefResolves : project.formatterRefResolvesBool = true
+
+def FormatterProject.validate (project : FormatterProject system) : Except SchemaError Unit := do
+  validateSchemaPackageRef "FormatterProject" "formatter" project.packageNames
+    project.formatter.packageName
+
+def FormatterProject.toOutputs : {system : System} -> FormatterProject system -> Outputs
+  | .x86_64_linux, project => {
+      packages
+        | .x86_64_linux => project.packages
+        | _ => []
+      apps := fun _ => []
+      devShells := fun _ => []
+      checks := fun _ => []
+      formatter
+        | .x86_64_linux => some project.formatter
+        | _ => none
+    }
+  | .aarch64_linux, project => {
+      packages
+        | .aarch64_linux => project.packages
+        | _ => []
+      apps := fun _ => []
+      devShells := fun _ => []
+      checks := fun _ => []
+      formatter
+        | .aarch64_linux => some project.formatter
+        | _ => none
+    }
+  | .x86_64_darwin, project => {
+      packages
+        | .x86_64_darwin => project.packages
+        | _ => []
+      apps := fun _ => []
+      devShells := fun _ => []
+      checks := fun _ => []
+      formatter
+        | .x86_64_darwin => some project.formatter
+        | _ => none
+    }
+  | .aarch64_darwin, project => {
+      packages
+        | .aarch64_darwin => project.packages
+        | _ => []
+      apps := fun _ => []
+      devShells := fun _ => []
+      checks := fun _ => []
+      formatter
+        | .aarch64_darwin => some project.formatter
+        | _ => none
+    }
+
+instance : FlakeSchema (FormatterProject system) where
+  toOutputs := FormatterProject.toOutputs
+  validate := FormatterProject.validate
+  Valid := FormatterProject.Valid
+
 structure MultiSystemCliProject where
   name : String
   x86_64Linux : Option (CliProject .x86_64_linux) := none

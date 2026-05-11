@@ -34,6 +34,8 @@ Two more elaborate examples build on the same model:
   want default dev-shell and check conventions.
 - `multiAppProject` uses `MultiAppProject` for a single package graph that
   exposes multiple app outputs.
+- `formatterProject` uses `FormatterProject` for flakes that expose the common
+  `formatter.${system}` convention as a typed package reference.
 
 Use a schema when the project matches a known convention and Leanix should name
 that convention in validation errors. Use raw `Flake` and `Outputs` values when
@@ -66,6 +68,8 @@ structured build step, and runs a structured Lean-project build inside
   at the library package.
 - for `MultiAppProject`: at least two app outputs exist, and app, dev-shell,
   and check references resolve inside the same package graph.
+- for `FormatterProject`: the formatter output points at a package in the same
+  system package graph.
 
 Graph validation reports `ValidateError` values, and schema validation reports
 `SchemaError` values. The CLI renders those values to plain text for humans,
@@ -92,8 +96,8 @@ strategy and next strengthening step are documented in
 `Leanix/Render.lean` lowers a `ValidatedFlake` to a generated `flake.nix`.
 The renderer no longer re-runs graph validation internally; raw `Flake` values
 must pass through `Flake.validateChecked` first. It renders inputs, package
-builders, apps, dev shells, and checks, plus a synthetic `default` package and
-`default` app when none is declared.
+builders, apps, dev shells, checks, and `formatter.${system}` outputs, plus a
+synthetic `default` package and `default` app when none is declared.
 
 The renderer emits one output block per active system. Each block binds its own
 `system` and `pkgs`, so package references such as
@@ -220,6 +224,8 @@ term source of build semantics.
 - `leanix render-example --out FILE` — typed `hello`
 - `leanix render-closure --out FILE` — typed package closure
 - `leanix render-cli-schema --out FILE` — `CliProject` lowered to a flake
+- `leanix render-formatter-schema --out FILE` — `FormatterProject` lowered to
+  `formatter.${system}`
 - `leanix render-library-schema --out FILE` — `LibraryProject` lowered to a
   package-first schema flake
 - `leanix render-multi-app-schema --out FILE` — `MultiAppProject` lowered to a
@@ -233,6 +239,7 @@ term source of build semantics.
 - `leanix emit-showcase-artifact --out DIR` — explicit showcase artifact alias
 - `leanix verify-artifact DIR` — replay the current showcase artifact contract
 - `leanix render-invalid-cli-schema --out FILE`
+- `leanix render-invalid-formatter-schema --out FILE`
 - `leanix render-invalid-library-schema --out FILE`
 - `leanix render-invalid-multi-app-schema --out FILE`
 - `leanix render-invalid-multi-system-schema --out FILE`
@@ -257,7 +264,9 @@ asserts they exit non-zero.
    `render-multi-system-schema` case pins the schema-level authoring path,
    where one logical CLI project lowers into those per-system outputs.
    `render-library-schema` and `render-multi-app-schema` pin the newer schema
-   vocabulary beyond the CLI default case.
+   vocabulary beyond the CLI default case. `render-formatter-schema` pins the
+   first scalar output convention, where a typed package reference lowers to
+   `formatter.${system}`.
 2. For each invalid case: invoke `lake exe leanix`, assert non-zero exit, and
    compare exact stderr for the expected error class.
 3. For the showcase only: also `lake env lean` the standalone Lean excerpt at

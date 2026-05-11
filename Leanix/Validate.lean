@@ -325,6 +325,7 @@ def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateErr
   let apps := flake.outputs.apps system
   let devShells := flake.outputs.devShells system
   let checks := flake.outputs.checks system
+  let formatter? := flake.outputs.formatter system
   let packageNames := packages.map (fun package => package.name)
   let inputNames := flake.inputs.map (fun input => input.fst)
 
@@ -353,6 +354,11 @@ def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateErr
     validatePackageRef system packageNames s!"check {check.name}" check.packageName
     validateCheckCommandPackageRefs system packageNames s!"check command {check.name}" check.command
     validateCheckCommandInputRefs inputNames check.command
+
+  match formatter? with
+  | none => pure ()
+  | some formatter =>
+      validatePackageRef system packageNames "formatter" formatter.packageName
 
 def validateInput (name : String) (input : Input) : Except ValidateError Unit := do
   match input with

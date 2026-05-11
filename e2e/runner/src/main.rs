@@ -744,6 +744,13 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/library-schema.flake.nix"),
         },
         Case {
+            name: "formatter schema flake",
+            render_arg: "render-formatter-schema",
+            source_arg: false,
+            lean_source: None,
+            golden: Some("e2e/golden/formatter-schema.flake.nix"),
+        },
+        Case {
             name: "multi-app schema flake",
             render_arg: "render-multi-app-schema",
             source_arg: false,
@@ -855,6 +862,12 @@ fn main() -> Result<(), String> {
             name: "invalid library schema",
             render_arg: "render-invalid-library-schema",
             expected_stderr: "error: LibraryProject devShell output must be named default",
+        },
+        InvalidCase {
+            name: "invalid formatter schema",
+            render_arg: "render-invalid-formatter-schema",
+            expected_stderr:
+                "error: FormatterProject formatter must point at an existing package missingFormatter",
         },
         InvalidCase {
             name: "invalid multi-app schema",

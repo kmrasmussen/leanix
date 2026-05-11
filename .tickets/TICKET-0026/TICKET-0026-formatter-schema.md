@@ -74,4 +74,20 @@ can expose a formatter package through validation before rendering.
 - `blog/yyyy-mm-dd-hh-mm-formatter-schema.md`
 
 ## Progress
-- Not started.
+- Added `Formatter system` as the typed model for the scalar
+  `formatter.${system}` flake convention.
+- Added `FormatterProject` as the first schema path for formatter outputs.
+- Added schema validation for formatter package references.
+- Added renderer support for `formatter.${system}` as a direct package
+  reference rather than an attrset family.
+- Added `formatterProject`, `formatterSchemaFlake`, and an invalid missing
+  formatter-reference example.
+- Added `render-formatter-schema` and `render-invalid-formatter-schema` CLI
+  commands.
+- Added `e2e/golden/formatter-schema.flake.nix`.
+- Added full e2e coverage for the valid formatter schema and exact stderr
+  coverage for the invalid formatter schema.
+- Updated PoC docs, examples docs, and added a dated blog note.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

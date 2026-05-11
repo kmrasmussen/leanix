@@ -202,17 +202,23 @@ structure Check (system : System) where
   command : CheckCommand
   deriving Repr, BEq
 
+structure Formatter (system : System) where
+  packageName : String
+  deriving Repr, BEq
+
 structure Outputs where
   packages : (system : System) -> List (Package system)
   apps : (system : System) -> List (App system)
   devShells : (system : System) -> List (DevShell system)
   checks : (system : System) -> List (Check system)
+  formatter : (system : System) -> Option (Formatter system) := fun _ => none
 
 def Outputs.empty : Outputs where
   packages := fun _ => []
   apps := fun _ => []
   devShells := fun _ => []
   checks := fun _ => []
+  formatter := fun _ => none
 
 structure Flake where
   description : String

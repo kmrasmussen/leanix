@@ -371,7 +371,8 @@ def hasOutputs (flake : Flake) (system : System) : Bool :=
   !(flake.outputs.packages system).isEmpty ||
   !(flake.outputs.apps system).isEmpty ||
   !(flake.outputs.devShells system).isEmpty ||
-  !(flake.outputs.checks system).isEmpty
+  !(flake.outputs.checks system).isEmpty ||
+  (flake.outputs.formatter system).isSome
 
 def activeSystems (flake : Flake) : List System :=
   System.all.filter (fun system => hasOutputs flake system)
@@ -467,20 +468,38 @@ def renderCheckLine (system : System) (packages : List (Package system)) (check 
         " { nativeBuildInputs = [ " ++ renderPackageRef check.packageName ++
         " ]; } ''\n          " ++ command ++ "\n        '';"
 
+def renderFormatterAttr (system : System) (packages : List (Package system))
+    (formatter : Formatter system) : Except String (List String) := do
+  match findPackage? packages formatter.packageName with
+  | none => throw s!"formatter refers to missing package {formatter.packageName}"
+  | some _ =>
+      pure [
+        "      formatter." ++ renderAttrName system.toNixString ++ " = let",
+        s!"        system = {renderString system.toNixString};",
+        "        pkgs = pkgsFor system;",
+        "      in " ++ renderPackageRef formatter.packageName ++ ";"
+      ]
+
 def renderOutputsForSystem (flake : Flake) (system : System) : Except String (List String) := do
   let packages := flake.outputs.packages system
   let apps := flake.outputs.apps system
   let devShells := flake.outputs.devShells system
   let checks := flake.outputs.checks system
+  let formatter? := flake.outputs.formatter system
   let packageLines ← packages.mapM (renderPackageEntry system)
   let appLines ← apps.mapM (renderAppLine system packages)
   let shellLines ← devShells.mapM (renderShellLine system packages)
   let checkLines ← checks.mapM (renderCheckLine system packages)
+  let formatterLines ←
+    match formatter? with
+    | none => pure []
+    | some formatter => renderFormatterAttr system packages formatter
   pure (
     renderSystemAttrSet system "packages" (packageLines ++ renderPackageDefaults system packages) ++
     renderSystemAttrSet system "apps" (appLines ++ renderAppDefaults apps) ++
     renderSystemAttrSet system "devShells" shellLines ++
-    renderSystemAttrSet system "checks" checkLines
+    renderSystemAttrSet system "checks" checkLines ++
+    formatterLines
   )
 
 def renderFlake (validated : ValidatedFlake) : Except String String := do
