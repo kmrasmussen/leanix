@@ -81,6 +81,8 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   (`ReferencesResolve` and `NoFuelBoundedCycles`) instead of exposing only raw
   boolean equality fields; the current constructors are still backed by the
   finite checker.
+- 🟡 `CheckCommand` provides a typed check-command surface with package/input
+  reference validation while keeping `rawShell` as an explicit escape hatch.
 - ⬜ Prove that successful validation implies renderable output for the
   supported Nix backend subset.
 - ⬜ Prove `validateNoPackageCycles` is sound and complete (it is fuel-bounded

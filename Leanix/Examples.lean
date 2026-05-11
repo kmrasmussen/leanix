@@ -126,7 +126,7 @@ def sourceFixturePackage : Package .x86_64_linux where
   build := .runSteps "source-fixture" [] [
     .copySource (.inputPath "fixtureSrc") "source",
     .mkdir "$out",
-    .run "cp source/message.txt \"$out/message.txt\""
+    .copyFile "source/message.txt" "$out/message.txt"
   ]
 
 def sourceFixtureCheck : Check .x86_64_linux where
@@ -285,7 +285,10 @@ def helloWrapperPackage : Package .x86_64_linux :=
 def closureCheck : Check .x86_64_linux where
   name := "helloWrapper"
   packageName := "helloWrapper"
-  command := "hello-wrapper > \"$out\""
+  command := .packageExecutableToOutput {
+    packageName := "helloWrapper"
+    executable := "hello-wrapper"
+  }
 
 def closureOutputs : Outputs where
   packages
@@ -350,6 +353,29 @@ def typedTextMissingRefFlake : Flake where
   description := "Leanix typed build text missing package reference example"
   inputs := [("nixpkgs", nixpkgsInput)]
   outputs := typedTextMissingRefOutputs
+
+def typedCheckMissingRef : Check .x86_64_linux where
+  name := "typedCheckMissingRef"
+  packageName := "hello"
+  command := .packageExecutableToOutput {
+    packageName := "missingCheckPackage"
+    executable := "missing-check"
+  }
+
+def typedCheckMissingRefOutputs : Outputs where
+  packages
+    | .x86_64_linux => [helloPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks
+    | .x86_64_linux => [typedCheckMissingRef]
+    | _ => []
+
+def typedCheckMissingRefFlake : Flake where
+  description := "Leanix typed check missing package reference example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := typedCheckMissingRefOutputs
 
 def brokenBuildPlan : BuildPlan :=
   .executableTextWrapper {

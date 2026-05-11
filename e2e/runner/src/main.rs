@@ -812,6 +812,12 @@ fn main() -> Result<(), String> {
                 "error: package typedTextBroken for x86_64-linux refers to missing package missingTextDep",
         },
         InvalidCase {
+            name: "typed check missing package reference",
+            render_arg: "render-invalid-typed-check-ref",
+            expected_stderr:
+                "error: check command typedCheckMissingRef for x86_64-linux refers to missing package missingCheckPackage",
+        },
+        InvalidCase {
             name: "build plan missing package reference",
             render_arg: "render-invalid-build-plan-ref",
             expected_stderr:

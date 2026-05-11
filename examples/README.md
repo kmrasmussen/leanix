@@ -31,3 +31,7 @@ previous direct `BuildExpr` version.
 That same closure path covers two typed builder identities: `helloToolPlan` is
 a known nixpkgs package identity, and `helloWrapperPlan` is an executable text
 wrapper with named arguments.
+
+The closure check now uses a typed `CheckCommand.packageExecutableToOutput`
+instead of raw shell. The source fixture example also uses the structured
+`BuildStep.copyFile` step for its final copy.

@@ -57,6 +57,7 @@ structured build step, and runs a structured Lean-project build inside
   `packageName` references an existing package for that system
 - every validated `BuildPlan` package/input reference can be inspected before
   the plan is lowered to a backend `BuildExpr`
+- typed `CheckCommand` package/input references resolve before checks render
 - package references are acyclic (fuel-bounded reachability)
 - for `CliProject`: app/dev-shell/check are named `default`; app and check
   point at the project package; the dev shell contains the project package.
@@ -178,10 +179,17 @@ package/input references before lowering to the backend expression.
 works from `BuildExpr`, and `Package.fromBuildPlan` is the migration bridge from
 typed plans to today's renderer.
 
+`CheckCommand` is the typed check-command surface. A check may still use
+`CheckCommand.rawShell`, but common checks can now say "run this package
+executable and write stdout to `$out`" or "assert this input path exists"
+without raw interpolation. Typed check command package/input references are
+validated alongside the check's primary package reference.
+
 `BuildExpr.runSteps` is the current structured builder surface. It owns common
 operations that Leanix wants to reason about semantically:
 
 - copying a source expression into the build directory
+- copying a file path to another file path
 - installing an executable script
 - building a Lean project with `lake build`
 - simple filesystem operations such as `mkdir`, `writeFile`, and `chmod +x`
@@ -199,7 +207,7 @@ Raw text and shell remain as explicit escape hatches in five places:
 - `BuildStep.writeFile`, for raw file text during migration
 - `BuildStep.run`, for a single command inside an otherwise structured step
   list
-- `Check.command`, because checks are still modeled as command strings
+- `CheckCommand.rawShell`, for checks that do not fit the typed command surface
 
 Those escape hatches are part of the prototype boundary, not the desired long
 term source of build semantics.

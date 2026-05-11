@@ -36,3 +36,25 @@ common cases Leanix should understand.
 2. Missing package/input references inside typed checks fail validation.
 3. Generated Nix remains readable and passes the Rust e2e harness.
 4. Docs list the remaining raw escape hatches and when they are acceptable.
+
+## Plan
+- Add `CheckCommand` with typed constructors and keep raw shell as an explicit
+  escape hatch.
+- Validate package/input references mentioned inside typed check commands.
+- Add one structured build step for a common raw-shell copy operation and
+  migrate an existing example to it.
+- Migrate one existing check to typed command authoring.
+- Add invalid e2e coverage, docs, and a dated blog note.
+
+## Progress
+- Added `CheckCommand` with raw shell, package executable, and input path typed
+  forms.
+- Added validation for package/input references inside typed check commands.
+- Migrated `closureCheck` to `CheckCommand.packageExecutableToOutput`.
+- Added `BuildStep.copyFile` and migrated the source fixture copy away from
+  raw `BuildStep.run`.
+- Added an invalid typed-check e2e case for a missing package reference.
+- Updated docs and added a dated blog note.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

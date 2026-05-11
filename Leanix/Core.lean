@@ -67,6 +67,7 @@ inductive BuildStep where
   | installExecutableTextScript : (path : String) -> (content : BuildText) -> BuildStep
   | buildLeanProject : (directory : String) -> BuildStep
   | mkdir : String -> BuildStep
+  | copyFile : (source : String) -> (destination : String) -> BuildStep
   | writeFile : (path : String) -> (content : String) -> BuildStep
   | writeTextFile : (path : String) -> (content : BuildText) -> BuildStep
   | chmodExecutable : String -> BuildStep
@@ -175,10 +176,30 @@ structure DevShell (system : System) where
   shellHook? : Option String := none
   deriving Repr, BEq
 
+structure PackageExecutableCommand where
+  packageName : String
+  executable : String
+  arguments : List String := []
+  deriving Repr, BEq
+
+structure InputPathCheckCommand where
+  inputName : String
+  path : String
+  deriving Repr, BEq
+
+inductive CheckCommand where
+  | rawShell : String -> CheckCommand
+  | packageExecutableToOutput : PackageExecutableCommand -> CheckCommand
+  | inputPathExists : InputPathCheckCommand -> CheckCommand
+  deriving Repr, BEq
+
+instance : Coe String CheckCommand where
+  coe := CheckCommand.rawShell
+
 structure Check (system : System) where
   name : String
   packageName : String
-  command : String
+  command : CheckCommand
   deriving Repr, BEq
 
 structure Outputs where

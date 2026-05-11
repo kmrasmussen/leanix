@@ -107,6 +107,7 @@ def validateBuildStepInputRefs (inputNames : List String) : BuildStep -> Except 
   | .installExecutableTextScript _ content => validateBuildTextInputRefs inputNames content
   | .buildLeanProject _ => pure ()
   | .mkdir _ => pure ()
+  | .copyFile _ _ => pure ()
   | .writeFile _ _ => pure ()
   | .writeTextFile _ content => validateBuildTextInputRefs inputNames content
   | .chmodExecutable _ => pure ()
@@ -144,6 +145,7 @@ def buildStepPackageRefs : BuildStep -> List String
   | .installExecutableTextScript _ content => buildTextPackageRefs content
   | .buildLeanProject _ => []
   | .mkdir _ => []
+  | .copyFile _ _ => []
   | .writeFile _ _ => []
   | .writeTextFile _ content => buildTextPackageRefs content
   | .chmodExecutable _ => []
@@ -192,11 +194,32 @@ def validateBuildStepPackageRefs (system : System) (packageNames : List String) 
       validateBuildTextPackageRefs system packageNames owner content
   | .buildLeanProject _ => pure ()
   | .mkdir _ => pure ()
+  | .copyFile _ _ => pure ()
   | .writeFile _ _ => pure ()
   | .writeTextFile _ content => validateBuildTextPackageRefs system packageNames owner content
   | .chmodExecutable _ => pure ()
   | .run _ => pure ()
 end
+
+def checkCommandPackageRefs : CheckCommand -> List String
+  | .rawShell _ => []
+  | .packageExecutableToOutput command => [command.packageName]
+  | .inputPathExists _ => []
+
+def checkCommandInputRefs : CheckCommand -> List String
+  | .rawShell _ => []
+  | .packageExecutableToOutput _ => []
+  | .inputPathExists command => [command.inputName]
+
+def validateCheckCommandPackageRefs (system : System) (packageNames : List String)
+    (owner : String) (command : CheckCommand) : Except ValidateError Unit := do
+  for packageName in checkCommandPackageRefs command do
+    validatePackageRef system packageNames owner packageName
+
+def validateCheckCommandInputRefs (inputNames : List String) (command : CheckCommand) :
+    Except ValidateError Unit := do
+  for inputName in checkCommandInputRefs command do
+    validateInputRef inputNames inputName
 
 def findPackageByName? (packages : List (Package system)) (name : String) :
     Option (Package system) :=
@@ -328,6 +351,8 @@ def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateErr
 
   for check in checks do
     validatePackageRef system packageNames s!"check {check.name}" check.packageName
+    validateCheckCommandPackageRefs system packageNames s!"check command {check.name}" check.command
+    validateCheckCommandInputRefs inputNames check.command
 
 def validateInput (name : String) (input : Input) : Except ValidateError Unit := do
   match input with

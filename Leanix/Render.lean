@@ -309,6 +309,8 @@ def renderBuildStepWithFuel (system : System) (fuel : Nat) : BuildStep -> Except
   | .buildLeanProject directory =>
       pure <| "          (cd " ++ renderString directory ++ " && lake build)"
   | .mkdir path => pure <| "          mkdir -p " ++ renderString path
+  | .copyFile source destination =>
+      pure <| "          cp " ++ renderString source ++ " " ++ renderString destination
   | .writeFile path content =>
       pure <| "          cp ${pkgs.writeText " ++ renderString "leanix-file" ++ " " ++ renderString content ++
         "} " ++ renderString path
@@ -445,15 +447,25 @@ def renderShellLine (system : System) (packages : List (Package system)) (shell 
     " = pkgs.mkShell { packages = [ " ++ joinWith " " packageExprs ++ " ];" ++
     renderEnvClause shell.env ++ " };"
 
+def renderCheckCommand : CheckCommand -> String
+  | .rawShell command => escapeNixIndentedString command
+  | .packageExecutableToOutput command =>
+      escapeNixIndentedString <|
+        command.executable ++ BuildPlan.argSuffix command.arguments ++ " > \"$out\""
+  | .inputPathExists command =>
+      "test -e ${" ++ command.inputName ++ "}/" ++ escapeNixIndentedString command.path ++ "\n" ++
+      "          touch \"$out\""
+
 def renderCheckLine (system : System) (packages : List (Package system)) (check : Check system) :
     Except String String := do
   match findPackage? packages check.packageName with
   | none => throw s!"check {check.name} refers to missing package {check.packageName}"
   | some _ =>
+      let command := renderCheckCommand check.command
       pure <| "        " ++ renderAttrName check.name ++
         " = pkgs.runCommand " ++ renderString (check.name ++ "-check") ++
         " { nativeBuildInputs = [ " ++ renderPackageRef check.packageName ++
-        " ]; } ''\n          " ++ escapeNixIndentedString check.command ++ "\n        '';"
+        " ]; } ''\n          " ++ command ++ "\n        '';"
 
 def renderOutputsForSystem (flake : Flake) (system : System) : Except String (List String) := do
   let packages := flake.outputs.packages system
