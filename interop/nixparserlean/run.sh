@@ -18,37 +18,8 @@ fi
 
 nixparserlean_dir="$(cd -- "$nixparserlean_dir" && pwd)"
 
-out_dir="$repo_root/generated/interop-nixparserlean"
-mkdir -p "$out_dir"
-
-render_case() {
-  local name="$1"
-  shift
-  local output="$out_dir/$name.flake.nix"
-
-  echo "render: $name"
-  (
-    cd "$repo_root"
-    nix develop --command lake exe leanix "$@" --out "$output"
-  )
-
-  echo "desugar: $name"
-  (
-    cd "$nixparserlean_dir"
-    nix develop --command lake exe nixparserlean --desugar --file "$output" >/dev/null
-  )
-
-  echo "eval: $name"
-  (
-    cd "$nixparserlean_dir"
-    nix develop --command lake exe nixparserlean --eval --file "$output" >/dev/null
-  )
-}
-
-render_case "hello" render-example
-render_case "closure" render-closure
-render_case "cli-schema" render-cli-schema
-render_case "showcase" render-showcase
-render_case "self" render-self --source "path:$repo_root"
-
-echo "nixparserlean interop smoke passed"
+cd "$repo_root"
+nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml -- \
+  --repo "$repo_root" \
+  --nixparserlean-dir "$nixparserlean_dir" \
+  --only-nixparserlean-interop

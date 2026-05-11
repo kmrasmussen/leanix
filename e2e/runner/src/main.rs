@@ -17,12 +17,41 @@ struct InvalidCase {
     expected_stderr: &'static str,
 }
 
+struct Args {
+    repo: Option<PathBuf>,
+    nixparserlean_dir: Option<PathBuf>,
+    only_nixparserlean_interop: bool,
+}
+
+struct InteropCase {
+    name: &'static str,
+    render_arg: &'static str,
+    source_arg: bool,
+}
+
 fn run(repo: &Path, program: &str, args: &[&str]) -> Result<(), String> {
     eprintln!("running: {} {}", program, args.join(" "));
     let status = Command::new(program)
         .args(args)
         .current_dir(repo)
         .stdin(Stdio::null())
+        .status()
+        .map_err(|err| format!("failed to start {program}: {err}"))?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("{program} exited with {status}"))
+    }
+}
+
+fn run_quiet(repo: &Path, program: &str, args: &[&str]) -> Result<(), String> {
+    eprintln!("running: {} {}", program, args.join(" "));
+    let status = Command::new(program)
+        .args(args)
+        .current_dir(repo)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
         .status()
         .map_err(|err| format!("failed to start {program}: {err}"))?;
 
@@ -335,6 +364,124 @@ fn run_hashed_source_case(repo: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn run_interop_case(
+    repo: &Path,
+    nixparserlean_dir: &Path,
+    out_dir: &Path,
+    case: &InteropCase,
+) -> Result<(), String> {
+    let output = out_dir.join(format!("{}.flake.nix", case.name));
+    let output_arg = output.to_string_lossy().into_owned();
+    let source = format!("path:{}", repo.display());
+
+    eprintln!("interop render: {}", case.name);
+    if case.source_arg {
+        run(
+            repo,
+            "lake",
+            &[
+                "exe",
+                "leanix",
+                case.render_arg,
+                "--source",
+                &source,
+                "--out",
+                &output_arg,
+            ],
+        )?;
+    } else {
+        run(
+            repo,
+            "lake",
+            &["exe", "leanix", case.render_arg, "--out", &output_arg],
+        )?;
+    }
+
+    eprintln!("interop desugar: {}", case.name);
+    run_quiet(
+        nixparserlean_dir,
+        "nix",
+        &[
+            "develop",
+            "--command",
+            "lake",
+            "exe",
+            "nixparserlean",
+            "--desugar",
+            "--file",
+            &output_arg,
+        ],
+    )?;
+
+    eprintln!("interop eval: {}", case.name);
+    run_quiet(
+        nixparserlean_dir,
+        "nix",
+        &[
+            "develop",
+            "--command",
+            "lake",
+            "exe",
+            "nixparserlean",
+            "--eval",
+            "--file",
+            &output_arg,
+        ],
+    )?;
+
+    Ok(())
+}
+
+fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<(), String> {
+    eprintln!("case: nixparserlean interop");
+    if !nixparserlean_dir.join("lakefile.lean").is_file()
+        || !nixparserlean_dir.join("NixParserLean").is_dir()
+    {
+        return Err(format!(
+            "nixparserlean path '{}' is not a nixparserlean checkout; expected lakefile.lean and NixParserLean/",
+            nixparserlean_dir.display()
+        ));
+    }
+
+    let out_dir = repo.join("generated/interop-nixparserlean");
+    fs::create_dir_all(&out_dir)
+        .map_err(|err| format!("failed creating {}: {err}", out_dir.display()))?;
+
+    let cases = [
+        InteropCase {
+            name: "hello",
+            render_arg: "render-example",
+            source_arg: false,
+        },
+        InteropCase {
+            name: "closure",
+            render_arg: "render-closure",
+            source_arg: false,
+        },
+        InteropCase {
+            name: "cli-schema",
+            render_arg: "render-cli-schema",
+            source_arg: false,
+        },
+        InteropCase {
+            name: "showcase",
+            render_arg: "render-showcase",
+            source_arg: false,
+        },
+        InteropCase {
+            name: "self",
+            render_arg: "render-self",
+            source_arg: true,
+        },
+    ];
+
+    for case in cases {
+        run_interop_case(repo, nixparserlean_dir, &out_dir, &case)?;
+    }
+
+    Ok(())
+}
+
 fn run_invalid_case(repo: &Path, case: &InvalidCase) -> Result<(), String> {
     let output = "generated/invalid-flake.nix";
     eprintln!("case: {}", case.name);
@@ -366,7 +513,7 @@ fn run_invalid_case(repo: &Path, case: &InvalidCase) -> Result<(), String> {
 }
 
 fn usage() -> &'static str {
-    "usage: leanix-e2e-runner [--repo PATH]\n       leanix-e2e-runner --help"
+    "usage: leanix-e2e-runner [--repo PATH] [--nixparserlean-dir PATH] [--only-nixparserlean-interop]\n       leanix-e2e-runner --help"
 }
 
 fn is_repo_root(path: &Path) -> bool {
@@ -395,25 +542,52 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
     }
 }
 
-fn parse_repo_arg() -> Result<Option<PathBuf>, String> {
+fn parse_args() -> Result<Args, String> {
     let args: Vec<String> = env::args().skip(1).collect();
-    match args.as_slice() {
-        [] => Ok(None),
-        [flag] if flag == "--help" || flag == "-h" => {
-            println!("{}", usage());
-            std::process::exit(0);
+    let mut repo = None;
+    let mut nixparserlean_dir = None;
+    let mut only_nixparserlean_interop = false;
+    let mut index = 0usize;
+
+    while index < args.len() {
+        match args[index].as_str() {
+            "--help" | "-h" => {
+                println!("{}", usage());
+                std::process::exit(0);
+            }
+            "--repo" => {
+                index += 1;
+                let path = args
+                    .get(index)
+                    .ok_or_else(|| format!("{}\n--repo requires PATH", usage()))?;
+                repo = Some(absolute_path(Path::new(path))?);
+            }
+            "--nixparserlean-dir" => {
+                index += 1;
+                let path = args
+                    .get(index)
+                    .ok_or_else(|| format!("{}\n--nixparserlean-dir requires PATH", usage()))?;
+                nixparserlean_dir = Some(absolute_path(Path::new(path))?);
+            }
+            "--only-nixparserlean-interop" => {
+                only_nixparserlean_interop = true;
+            }
+            unknown => {
+                return Err(format!("{}\nunknown argument: {}", usage(), unknown));
+            }
         }
-        [flag, path] if flag == "--repo" => absolute_path(Path::new(path)).map(Some),
-        _ => Err(format!(
-            "{}\nunknown arguments: {}",
-            usage(),
-            args.join(" ")
-        )),
+        index += 1;
     }
+
+    Ok(Args {
+        repo,
+        nixparserlean_dir,
+        only_nixparserlean_interop,
+    })
 }
 
-fn repo_root() -> Result<PathBuf, String> {
-    if let Some(explicit) = parse_repo_arg()? {
+fn repo_root(explicit: Option<PathBuf>) -> Result<PathBuf, String> {
+    if let Some(explicit) = explicit {
         if is_repo_root(&explicit) {
             return Ok(explicit);
         }
@@ -433,8 +607,32 @@ fn repo_root() -> Result<PathBuf, String> {
     })
 }
 
+fn configured_nixparserlean_dir(explicit: Option<PathBuf>) -> Result<Option<PathBuf>, String> {
+    if explicit.is_some() {
+        return Ok(explicit);
+    }
+
+    match env::var_os("NIXPARSERLEAN_DIR") {
+        Some(path) => absolute_path(Path::new(&path)).map(Some),
+        None => Ok(None),
+    }
+}
+
 fn main() -> Result<(), String> {
-    let repo = repo_root()?;
+    let args = parse_args()?;
+    let repo = repo_root(args.repo)?;
+    let nixparserlean_dir = configured_nixparserlean_dir(args.nixparserlean_dir)?;
+
+    if args.only_nixparserlean_interop {
+        let nixparserlean_dir = nixparserlean_dir.ok_or_else(|| {
+            "--only-nixparserlean-interop requires --nixparserlean-dir PATH or NIXPARSERLEAN_DIR"
+                .to_string()
+        })?;
+        run_nixparserlean_interop(&repo, &nixparserlean_dir)?;
+        eprintln!("e2e: all cases passed");
+        return Ok(());
+    }
+
     let cases = [
         Case {
             name: "typed hello flake",
@@ -558,6 +756,13 @@ fn main() -> Result<(), String> {
 
     for case in invalid_cases {
         run_invalid_case(&repo, &case)?;
+    }
+
+    match nixparserlean_dir {
+        Some(nixparserlean_dir) => run_nixparserlean_interop(&repo, &nixparserlean_dir)?,
+        None => eprintln!(
+            "case: nixparserlean interop (skipped; pass --nixparserlean-dir PATH or set NIXPARSERLEAN_DIR)"
+        ),
     }
 
     eprintln!("e2e: all cases passed");

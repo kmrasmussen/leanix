@@ -14,7 +14,7 @@ dialect?
 
 ## Status
 
-Experimental local-checkout smoke test.
+Experimental local-checkout smoke test, owned by the Rust e2e harness.
 
 This is not a shared AST package, not a stable Lean dependency between the
 repositories, and not a proof that nixparserlean can execute the generated
@@ -57,7 +57,20 @@ From the Leanix repo root:
 interop/nixparserlean/run.sh
 ```
 
-The script renders selected Leanix examples into
+The script is a convenience wrapper around the Rust e2e harness:
+
+```sh
+cargo run --locked --manifest-path e2e/runner/Cargo.toml -- \
+  --nixparserlean-dir ../nixparserlean \
+  --only-nixparserlean-interop
+```
+
+The full e2e harness also accepts `--nixparserlean-dir PATH`. When provided, it
+runs the normal Leanix e2e cases and then runs nixparserlean interop. Without
+that flag, and without `NIXPARSERLEAN_DIR`, the normal e2e run prints an
+explicit skip message for this optional bridge.
+
+The interop suite renders selected Leanix examples into
 `generated/interop-nixparserlean/`, then runs nixparserlean against each
 generated flake with both `--desugar` and `--eval`.
 
@@ -71,5 +84,6 @@ harness already owns the Nix backend smoke test.
 - No machine-readable AST contract yet; nixparserlean still prints `repr`.
 - No full Nix evaluation claim.
 
-If this bridge becomes load-bearing, the next step is to move the same check
-into the Rust e2e harness with a configurable nixparserlean path.
+The next step is a parsed-output contract: compare a machine-readable
+nixparserlean summary back to the Leanix typed graph rather than only checking
+that generated files desugar and evaluate.

@@ -38,3 +38,25 @@ optional, configurable interop suite.
 3. The default e2e run remains usable on machines without a nixparserlean
    checkout.
 4. The bridge still writes only ignored generated artifacts.
+
+## Plan
+1. Extend the Rust e2e runner argument parser with `--nixparserlean-dir` and
+   `--only-nixparserlean-interop`.
+2. Port the five existing shell-script cases into Rust-owned render/desugar/eval
+   orchestration.
+3. Make the shell script delegate to the Rust path.
+4. Verify default skip behavior, explicit interop behavior, and the normal full
+   e2e suite.
+
+## Progress
+- Added optional nixparserlean interop to the Rust e2e runner.
+- Added `NIXPARSERLEAN_DIR` support and an explicit skip message when the
+  optional bridge is not configured.
+- Added `--only-nixparserlean-interop` for the existing shell wrapper.
+- Changed `interop/nixparserlean/run.sh` to delegate to the Rust harness.
+- Documented both the full-run flag and wrapper usage.
+- Verified the default e2e run still passes and prints an explicit
+  nixparserlean interop skip when no path is configured.
+- Verified the full e2e run with `--nixparserlean-dir ../nixparserlean`.
+- Verified the targeted `--only-nixparserlean-interop` mode and the wrapper
+  script.
