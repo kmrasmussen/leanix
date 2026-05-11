@@ -70,5 +70,25 @@ a parsed summary contract for Leanix-generated flakes.
 - possibly sibling `../nixparserlean`
 - `blog/yyyy-mm-dd-hh-mm-parsed-nix-summary-contract.md`
 
+## Plan
+- Extend the Rust interop expectation type so each generated-flake case
+  declares parsed facts instead of relying on one-off broad JSON fragments.
+- Check input declarations, output families, active systems, default aliases,
+  and formatter outputs against nixparserlean `--desugar --format json`.
+- Keep the interop files under `generated/interop-nixparserlean/` and preserve
+  the default e2e path when no sibling checkout is configured.
+- Document the exact parse/desugar/top-level boundary and add a dated blog
+  note.
+
 ## Progress
-- Not started.
+- Expanded `ParsedOutputContract` with input declarations, formatter outputs,
+  default app aliases, and formatter package targets.
+- Added parsed-contract checks for `inputs` and expected input names.
+- Added parsed-contract checks for `formatter.${system}` output shape.
+- Added parsed-contract checks for default app aliases.
+- Added the formatter schema to the optional nixparserlean interop suite.
+- Updated interop docs, PoC docs, and added a dated blog note.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --nixparserlean-dir ../nixparserlean`

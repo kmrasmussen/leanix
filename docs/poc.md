@@ -299,6 +299,16 @@ asserts they exit non-zero.
    `examples/proof-carrying-cli-closure/source.lean` to confirm it still
    elaborates against the public Leanix surface.
 
+When `--nixparserlean-dir PATH` or `NIXPARSERLEAN_DIR` is provided, the harness
+also runs optional nixparserlean interop. It renders selected examples under
+`generated/interop-nixparserlean/`, asks nixparserlean for
+`--desugar --format json`, checks declared parsed facts, and then runs
+`--eval` on the top-level flake record. The parsed facts cover input
+declarations, output families, active systems, package, app, dev-shell, check,
+formatter names, and selected default aliases. This is a syntax/desugar/top-level
+eval contract only; it does not apply the flake `outputs` function to real
+inputs or prove semantic equivalence with Nix.
+
 Run it from the repo root:
 
 ```sh

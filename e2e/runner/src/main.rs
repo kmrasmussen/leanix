@@ -32,12 +32,16 @@ struct InteropCase {
 
 #[derive(Clone, Copy)]
 struct ParsedOutputContract {
+    inputs: &'static [&'static str],
     systems: &'static [&'static str],
     packages: &'static [&'static str],
     apps: &'static [&'static str],
     dev_shells: &'static [&'static str],
     checks: &'static [&'static str],
+    formatters: &'static [&'static str],
     default_package_targets: &'static [&'static str],
+    default_app_targets: &'static [&'static str],
+    formatter_package_targets: &'static [&'static str],
 }
 
 fn run(repo: &Path, program: &str, args: &[&str]) -> Result<(), String> {
@@ -523,6 +527,9 @@ fn check_parsed_output_contract(
     json: &str,
     contract: ParsedOutputContract,
 ) -> Result<(), String> {
+    if !contract.inputs.is_empty() {
+        require_static_assign(json, case_name, "inputs")?;
+    }
     if !contract.packages.is_empty() {
         require_static_assign(json, case_name, "packages")?;
     }
@@ -534,6 +541,12 @@ fn check_parsed_output_contract(
     }
     if !contract.checks.is_empty() {
         require_static_assign(json, case_name, "checks")?;
+    }
+    if !contract.formatters.is_empty() {
+        require_static_assign(json, case_name, "formatter")?;
+    }
+    for input in contract.inputs {
+        require_static_assign(json, case_name, input)?;
     }
     for system in contract.systems {
         require_static_assign(json, case_name, system)?;
@@ -550,7 +563,16 @@ fn check_parsed_output_contract(
     for check in contract.checks {
         require_static_assign(json, case_name, check)?;
     }
+    for formatter in contract.formatters {
+        require_static_assign(json, case_name, formatter)?;
+    }
     for package in contract.default_package_targets {
+        require_select_path(json, case_name, &["packages", package])?;
+    }
+    for app in contract.default_app_targets {
+        require_select_path(json, case_name, &["apps", app])?;
+    }
+    for package in contract.formatter_package_targets {
         require_select_path(json, case_name, &["packages", package])?;
     }
 
@@ -559,12 +581,16 @@ fn check_parsed_output_contract(
 
 fn check_parsed_contract_rejects_missing_fact(case_name: &str, json: &str) -> Result<(), String> {
     let impossible = ParsedOutputContract {
+        inputs: &[],
         systems: &["x86_64-linux"],
         packages: &["leanixMissingPackageForNegativeCheck"],
         apps: &[],
         dev_shells: &[],
         checks: &[],
+        formatters: &[],
         default_package_targets: &[],
+        default_app_targets: &[],
+        formatter_package_targets: &[],
     };
 
     match check_parsed_output_contract(case_name, json, impossible) {
@@ -674,12 +700,16 @@ fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<()
             render_arg: "render-example",
             source_arg: false,
             parsed_contract: Some(ParsedOutputContract {
+                inputs: &["nixpkgs"],
                 systems: &["x86_64-linux"],
                 packages: &["hello"],
                 apps: &["hello", "default"],
                 dev_shells: &["default"],
                 checks: &["hello"],
+                formatters: &[],
                 default_package_targets: &["hello"],
+                default_app_targets: &["hello"],
+                formatter_package_targets: &[],
             }),
         },
         InteropCase {
@@ -693,12 +723,33 @@ fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<()
             render_arg: "render-cli-schema",
             source_arg: false,
             parsed_contract: Some(ParsedOutputContract {
+                inputs: &["nixpkgs"],
                 systems: &["x86_64-linux"],
                 packages: &["hello"],
                 apps: &["default"],
                 dev_shells: &["default"],
                 checks: &["default"],
+                formatters: &[],
                 default_package_targets: &["hello"],
+                default_app_targets: &[],
+                formatter_package_targets: &[],
+            }),
+        },
+        InteropCase {
+            name: "formatter-schema",
+            render_arg: "render-formatter-schema",
+            source_arg: false,
+            parsed_contract: Some(ParsedOutputContract {
+                inputs: &["nixpkgs"],
+                systems: &["x86_64-linux"],
+                packages: &["helloTool"],
+                apps: &[],
+                dev_shells: &[],
+                checks: &[],
+                formatters: &["x86_64-linux"],
+                default_package_targets: &["helloTool"],
+                default_app_targets: &[],
+                formatter_package_targets: &["helloTool"],
             }),
         },
         InteropCase {
@@ -706,12 +757,16 @@ fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<()
             render_arg: "render-showcase",
             source_arg: false,
             parsed_contract: Some(ParsedOutputContract {
+                inputs: &["nixpkgs"],
                 systems: &["x86_64-linux"],
                 packages: &["helloWrapper", "helloTool"],
                 apps: &["default"],
                 dev_shells: &["default"],
                 checks: &["default"],
+                formatters: &[],
                 default_package_targets: &["helloWrapper"],
+                default_app_targets: &[],
+                formatter_package_targets: &[],
             }),
         },
         InteropCase {
@@ -719,12 +774,16 @@ fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<()
             render_arg: "render-multi-system",
             source_arg: false,
             parsed_contract: Some(ParsedOutputContract {
+                inputs: &["nixpkgs"],
                 systems: &["x86_64-linux", "aarch64-linux"],
                 packages: &["hello"],
                 apps: &[],
                 dev_shells: &[],
                 checks: &[],
+                formatters: &[],
                 default_package_targets: &["hello"],
+                default_app_targets: &[],
+                formatter_package_targets: &[],
             }),
         },
         InteropCase {

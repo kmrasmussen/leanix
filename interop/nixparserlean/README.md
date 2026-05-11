@@ -26,10 +26,11 @@ Leanix value -> generated flake.nix -> nixparserlean --desugar JSON / --eval
 
 For selected cases, the Rust harness consumes nixparserlean's
 `--desugar --format json` output and checks a small parsed-output summary:
-output families, systems, package/app/dev-shell/check names, and synthetic
-default-package references. The `--eval` check still evaluates only the
-top-level flake record. It can produce an `outputs` lambda closure, but it does
-not apply that closure to real flake inputs.
+input declarations, output families, active systems, package/app/dev-shell/check
+names, formatter outputs, and selected synthetic default aliases. The `--eval`
+check still evaluates only the top-level flake record. It can produce an
+`outputs` lambda closure, but it does not apply that closure to real flake
+inputs.
 
 ## Layout
 
@@ -76,8 +77,15 @@ explicit skip message for this optional bridge.
 The interop suite renders selected Leanix examples into
 `generated/interop-nixparserlean/`, then runs nixparserlean against each
 generated flake with both `--desugar --format json` and `--eval`. Parsed-output
-contracts currently cover the hello, CLI schema, showcase, and multi-system
-examples.
+contracts currently cover the hello, CLI schema, formatter schema, showcase,
+and multi-system examples.
+
+The parsed contract is intentionally small. It checks that expected static
+assignments and select paths appear in the desugared JSON; it is not a complete
+Nix AST normalization layer. The useful boundary is that Leanix declares the
+facts it expects from generated flakes, and the Rust harness checks those facts
+against an independent parser before running the narrow top-level eval smoke
+test.
 
 It intentionally does not run `nix flake check`; Leanix's main Rust e2e
 harness already owns the Nix backend smoke test.
@@ -90,5 +98,5 @@ harness already owns the Nix backend smoke test.
   shape as a narrow interop contract.
 - No full Nix evaluation claim.
 
-The next step is to make the parsed summary richer and less string-fragment
-based, ideally with an explicit summary mode in nixparserlean.
+The next step is to replace these desugared-JSON path checks with an explicit
+summary mode in nixparserlean once that shape stabilizes.
