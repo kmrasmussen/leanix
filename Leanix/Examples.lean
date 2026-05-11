@@ -155,6 +155,110 @@ def sourceFixtureFlakeWithSource (sourceUrl : String) : Flake where
 def sourceFixtureFlake : Flake :=
   sourceFixtureFlakeWithSource "path:../e2e/source-fixture"
 
+def envPackage : Package .x86_64_linux where
+  name := "envEcho"
+  env := [
+    { name := "LEANIX_MESSAGE", value := "hello from Leanix env" }
+  ]
+  build := .runCommand "env-echo" [] (
+    "test \"$LEANIX_MESSAGE\" = \"hello from Leanix env\"\n" ++
+    "mkdir -p \"$out\"\n" ++
+    "printf \"%s\\n\" \"$LEANIX_MESSAGE\" > \"$out/message\""
+  )
+
+def envDevShell : DevShell .x86_64_linux where
+  name := "env"
+  packageNames := ["envEcho"]
+  env := [
+    { name := "LEANIX_MESSAGE", value := "hello from Leanix shell" }
+  ]
+
+def envCheck : Check .x86_64_linux where
+  name := "envEcho"
+  packageName := "envEcho"
+  command := "touch \"$out\""
+
+def envOutputs : Outputs where
+  packages
+    | .x86_64_linux => [envPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells
+    | .x86_64_linux => [envDevShell]
+    | _ => []
+  checks
+    | .x86_64_linux => [envCheck]
+    | _ => []
+
+def envFlake : Flake where
+  description := "Leanix env var example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := envOutputs
+
+def duplicatePackageEnvPackage : Package .x86_64_linux where
+  name := "duplicatePackageEnv"
+  env := [
+    { name := "LEANIX_DUP", value := "first" },
+    { name := "LEANIX_DUP", value := "second" }
+  ]
+  build := .runCommand "duplicate-package-env" [] "touch \"$out\""
+
+def duplicatePackageEnvOutputs : Outputs where
+  packages
+    | .x86_64_linux => [duplicatePackageEnvPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks := fun _ => []
+
+def duplicatePackageEnvFlake : Flake where
+  description := "Leanix duplicate package env example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := duplicatePackageEnvOutputs
+
+def duplicateShellEnvShell : DevShell .x86_64_linux where
+  name := "dupShell"
+  packageNames := ["hello"]
+  env := [
+    { name := "LEANIX_DUP", value := "first" },
+    { name := "LEANIX_DUP", value := "second" }
+  ]
+
+def duplicateShellEnvOutputs : Outputs where
+  packages
+    | .x86_64_linux => [helloPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells
+    | .x86_64_linux => [duplicateShellEnvShell]
+    | _ => []
+  checks := fun _ => []
+
+def duplicateShellEnvFlake : Flake where
+  description := "Leanix duplicate shell env example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := duplicateShellEnvOutputs
+
+def unsupportedEnvPackage : Package .x86_64_linux where
+  name := "unsupportedEnv"
+  env := [
+    { name := "LEANIX_MESSAGE", value := "not wired through nixpkgs builders" }
+  ]
+  build := .nixpkgs "hello"
+
+def unsupportedEnvOutputs : Outputs where
+  packages
+    | .x86_64_linux => [unsupportedEnvPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks := fun _ => []
+
+def unsupportedEnvFlake : Flake where
+  description := "Leanix unsupported package env example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := unsupportedEnvOutputs
+
 def pinnedInputFlake : Flake where
   description := "Leanix pinned flake input example"
   inputs := [("nixpkgs", pinnedNixpkgsInput)]

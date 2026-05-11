@@ -243,6 +243,23 @@ def renderOutputArgs : List (String × Input) -> List String
       | .source _ => renderOutputArgs rest
       | _ => renderOutputArg input.fst :: renderOutputArgs rest
 
+def renderEnvEntry (env : EnvVar) : String :=
+  renderAttrName env.name ++ " = " ++ renderString env.value ++ ";"
+
+def renderEnvEntries : List EnvVar -> String
+  | [] => ""
+  | env :: [] => renderEnvEntry env
+  | env :: rest => renderEnvEntry env ++ " " ++ renderEnvEntries rest
+
+def renderEnvClause (env : List EnvVar) : String :=
+  match env with
+  | [] => ""
+  | _ => " env = { " ++ renderEnvEntries env ++ " };"
+
+def renderRunCommandAttrs (nativeBuildInputs : List String) (env : List EnvVar) : String :=
+  "{ nativeBuildInputs = [ " ++ joinWith " " nativeBuildInputs ++ " ];" ++
+    renderEnvClause env ++ " }"
+
 mutual
 def renderBuildTextFragment (system : System) : BuildText -> String
   | .literal text => escapeNixString text
@@ -268,16 +285,14 @@ def renderBuildExprWithFuel (system : System) : Nat -> BuildExpr -> Except Strin
   | fuel + 1, .runCommand name nativeBuildInputs script => do
       let renderedInputs ← nativeBuildInputs.mapM (renderBuildExprListItemWithFuel system fuel)
       pure <| "pkgs.runCommand " ++ renderString name ++
-        " { nativeBuildInputs = [ " ++
-        joinWith " " renderedInputs ++
-        " ]; } ''\n          " ++ escapeNixIndentedString script ++ "\n        ''"
+        " " ++ renderRunCommandAttrs renderedInputs [] ++
+        " ''\n          " ++ escapeNixIndentedString script ++ "\n        ''"
   | fuel + 1, .runSteps name nativeBuildInputs steps => do
       let renderedInputs ← nativeBuildInputs.mapM (renderBuildExprListItemWithFuel system fuel)
       let renderedSteps ← renderBuildStepsWithFuel system fuel steps
       pure <| "pkgs.runCommand " ++ renderString name ++
-        " { nativeBuildInputs = [ " ++
-        joinWith " " renderedInputs ++
-        " ]; } ''\n" ++ renderedSteps ++ "\n        ''"
+        " " ++ renderRunCommandAttrs renderedInputs [] ++
+        " ''\n" ++ renderedSteps ++ "\n        ''"
 
 def renderBuildStepWithFuel (system : System) (fuel : Nat) : BuildStep -> Except String String
   | .copySource source destination => do
@@ -321,6 +336,25 @@ end
 def renderBuildExpr (system : System) (expr : BuildExpr) : Except String String :=
   renderBuildExprWithFuel system 64 expr
 
+def renderBuildExprWithEnv (system : System) (env : List EnvVar) (expr : BuildExpr) :
+    Except String String := do
+  match env with
+  | [] => renderBuildExpr system expr
+  | _ =>
+      match expr with
+      | .runCommand name nativeBuildInputs script => do
+          let renderedInputs ← nativeBuildInputs.mapM (renderBuildExprListItemWithFuel system 64)
+          pure <| "pkgs.runCommand " ++ renderString name ++
+            " " ++ renderRunCommandAttrs renderedInputs env ++
+            " ''\n          " ++ escapeNixIndentedString script ++ "\n        ''"
+      | .runSteps name nativeBuildInputs steps => do
+          let renderedInputs ← nativeBuildInputs.mapM (renderBuildExprListItemWithFuel system 64)
+          let renderedSteps ← renderBuildStepsWithFuel system 64 steps
+          pure <| "pkgs.runCommand " ++ renderString name ++
+            " " ++ renderRunCommandAttrs renderedInputs env ++
+            " ''\n" ++ renderedSteps ++ "\n        ''"
+      | _ => throw "package env vars are only supported for runCommand and runSteps builders"
+
 def renderBuildExprListItem (system : System) (expr : BuildExpr) : Except String String :=
   match expr with
   | .runCommand _ _ _ => do
@@ -358,7 +392,7 @@ def renderSystemAttrSet (system : System) (family : String) (entries : List Stri
     ] ++ entries ++ ["      };"]
 
 def renderPackageEntry (system : System) (package : Package system) : Except String String := do
-  let renderedBuild ← renderBuildExpr system package.build
+  let renderedBuild ← renderBuildExprWithEnv system package.env package.build
   pure <| "        " ++ renderAttrName package.name ++ " = " ++ renderedBuild ++ ";"
 
 def renderPackageDefaults (system : System) (packages : List (Package system)) : List String :=
@@ -408,7 +442,8 @@ def renderShellLine (system : System) (packages : List (Package system)) (shell 
     | none => throw s!"devShell {shell.name} refers to missing package {packageName}"
     | some _ => pure (renderPackageRef packageName)
   pure <| "        " ++ renderAttrName shell.name ++
-    " = pkgs.mkShell { packages = [ " ++ joinWith " " packageExprs ++ " ]; };"
+    " = pkgs.mkShell { packages = [ " ++ joinWith " " packageExprs ++ " ];" ++
+    renderEnvClause shell.env ++ " };"
 
 def renderCheckLine (system : System) (packages : List (Package system)) (check : Check system) :
     Except String String := do

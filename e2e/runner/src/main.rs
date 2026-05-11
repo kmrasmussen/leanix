@@ -492,6 +492,13 @@ fn main() -> Result<(), String> {
             lean_source: None,
             golden: Some("e2e/golden/pinned-inputs.flake.nix"),
         },
+        Case {
+            name: "env var rendering",
+            render_arg: "render-env",
+            source_arg: false,
+            lean_source: None,
+            golden: Some("e2e/golden/env.flake.nix"),
+        },
     ];
     let invalid_cases = [
         InvalidCase {
@@ -510,6 +517,23 @@ fn main() -> Result<(), String> {
             render_arg: "render-invalid-typed-text-ref",
             expected_stderr:
                 "error: package typedTextBroken for x86_64-linux refers to missing package missingTextDep",
+        },
+        InvalidCase {
+            name: "duplicate package env",
+            render_arg: "render-invalid-duplicate-package-env",
+            expected_stderr:
+                "error: duplicate env var names for package duplicatePackageEnv on x86_64-linux",
+        },
+        InvalidCase {
+            name: "duplicate dev shell env",
+            render_arg: "render-invalid-duplicate-shell-env",
+            expected_stderr: "error: duplicate env var names for devShell dupShell on x86_64-linux",
+        },
+        InvalidCase {
+            name: "unsupported package env builder",
+            render_arg: "render-invalid-unsupported-env-builder",
+            expected_stderr:
+                "error: package unsupportedEnv for x86_64-linux can only set env vars on runCommand or runSteps builders",
         },
         InvalidCase {
             name: "invalid CLI schema",

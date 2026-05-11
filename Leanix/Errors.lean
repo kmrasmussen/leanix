@@ -9,6 +9,8 @@ inductive ValidateError where
   | missingPackageRef : (system : System) -> (owner : String) -> (packageName : String) -> ValidateError
   | packageCycle : (system : System) -> (packageName : String) -> (throughPackage : String) -> ValidateError
   | sourceInputMissingHash : (name : String) -> ValidateError
+  | duplicateEnvNames : (system : System) -> (owner : String) -> ValidateError
+  | packageEnvUnsupportedBuild : (system : System) -> (packageName : String) -> ValidateError
   deriving Repr, BEq
 
 def ValidateError.toString : ValidateError -> String
@@ -23,6 +25,10 @@ def ValidateError.toString : ValidateError -> String
       s!"package dependency cycle for {system.toNixString}: {packageName} reaches itself through {throughPackage}"
   | .sourceInputMissingHash name =>
       s!"source input {name} must have a narHash"
+  | .duplicateEnvNames system owner =>
+      s!"duplicate env var names for {owner} on {system.toNixString}"
+  | .packageEnvUnsupportedBuild system packageName =>
+      s!"package {packageName} for {system.toNixString} can only set env vars on runCommand or runSteps builders"
 
 instance : ToString ValidateError where
   toString := ValidateError.toString

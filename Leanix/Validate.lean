@@ -13,6 +13,22 @@ def validateUniqueNames (system : System) (family : String) (names : List String
   else
     pure ()
 
+def validateEnvVars (system : System) (owner : String) (env : List EnvVar) :
+    Except ValidateError Unit := do
+  if hasDuplicateString (env.map (fun var => var.name)) then
+    throw (.duplicateEnvNames system owner)
+  else
+    pure ()
+
+def validatePackageEnvVars (system : System) (package : Package system) :
+    Except ValidateError Unit := do
+  validateEnvVars system s!"package {package.name}" package.env
+  match package.env, package.build with
+  | [], _ => pure ()
+  | _ :: _, .runCommand _ _ _ => pure ()
+  | _ :: _, .runSteps _ _ _ => pure ()
+  | _ :: _, _ => throw (.packageEnvUnsupportedBuild system package.name)
+
 def validatePackageRef (system : System) (packageNames : List String) (owner : String)
     (packageName : String) : Except ValidateError Unit := do
   if packageNames.contains packageName then
@@ -256,10 +272,14 @@ def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateErr
 
   let _checkedPackages ← checkPackageGraph system packages
 
+  for package in packages do
+    validatePackageEnvVars system package
+
   for app in apps do
     validatePackageRef system packageNames s!"app {app.name}" app.packageName
 
   for shell in devShells do
+    validateEnvVars system s!"devShell {shell.name}" shell.env
     for packageName in shell.packageNames do
       validatePackageRef system packageNames s!"devShell {shell.name}" packageName
 
