@@ -129,6 +129,21 @@ def verifyFileHashes (dir : System.FilePath) (manifest : String) :
                   return .error s!"artifact file hash mismatch: {file}"
       pure (.ok ())
 
+def hasLockfileWitnessMetadata (manifest : String) : Bool :=
+  stringContains manifest "\"lockfile\"" &&
+  stringContains manifest "\"lockfileNode\"" &&
+  stringContains manifest "\"lockedRev\"" &&
+  stringContains manifest "\"lockedNarHash\""
+
+def verifyArtifactInputPolicy (manifest : String) : Except String Unit :=
+  if stringContains manifest "\"trustClass\": \"floating-flake-input\"" then
+    .error "artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness"
+  else if stringContains manifest "\"trustClass\": \"lockfile-backed-flake-input\"" &&
+      !hasLockfileWitnessMetadata manifest then
+    .error "artifact input policy rejected: lockfile-backed flake inputs require lockfile witness metadata"
+  else
+    .ok ()
+
 def runReplayCommand (cwd? : Option System.FilePath) (cmd : String) (args : Array String) :
     IO (Except String Unit) := do
   let output ← IO.Process.output {
@@ -149,9 +164,9 @@ def verifyShowcaseArtifact (artifactDir : String) : IO (Except String Unit) := d
   match manifest with
   | .error error => pure (.error error)
   | .ok manifest => do
-      if stringContains manifest "\"trustClass\": \"floating-flake-input\"" then
-        pure (.error "artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness")
-      else do
+      match verifyArtifactInputPolicy manifest with
+      | .error error => pure (.error error)
+      | .ok _ => do
         match ← verifyGeneratedFilesExist dir manifest with
         | .error error => pure (.error error)
         | .ok _ => do
@@ -162,16 +177,29 @@ def verifyShowcaseArtifact (artifactDir : String) : IO (Except String Unit) := d
                 match flake with
                 | .error error => pure (.error error)
                 | .ok flake =>
+                    let inputPolicyChecks : List (Except String Unit) :=
+                      if stringContains manifest "\"trustClass\": \"lockfile-backed-flake-input\"" then
+                        [
+                          requireSubstring "manifest input trust class" manifest "\"trustClass\": \"lockfile-backed-flake-input\"",
+                          requireSubstring "manifest input pin policy" manifest "\"pinPolicy\": \"lockfile-witness\"",
+                          requireSubstring "manifest lockfile witness" manifest "\"lockfile\"",
+                          requireSubstring "manifest lockfile witness" manifest "\"lockfileNode\"",
+                          requireSubstring "manifest lockfile witness" manifest "\"lockedRev\"",
+                          requireSubstring "manifest lockfile witness" manifest "\"lockedNarHash\""
+                        ]
+                      else
+                        [
+                          requireSubstring "manifest input trust class" manifest "\"trustClass\": \"pinned-flake-input\"",
+                          requireSubstring "manifest input pin policy" manifest "\"pinPolicy\": \"pinned-ref\"",
+                          requireSubstring "manifest input rev" manifest "\"rev\"",
+                          requireSubstring "manifest input narHash" manifest "\"narHash\""
+                        ]
                     let checks : List (Except String Unit) := [
                       requireSubstring "manifest" manifest "\"generatedFiles\"",
                       requireSubstring "manifest" manifest "\"fileHashes\"",
                       requireSubstring "manifest generated files" manifest "\"flake.nix\"",
                       requireSubstring "manifest generated files" manifest "\"leanix.manifest.json\"",
                       requireSubstring "manifest systems" manifest "\"x86_64-linux\"",
-                      requireSubstring "manifest input trust class" manifest "\"trustClass\": \"pinned-flake-input\"",
-                      requireSubstring "manifest input pin policy" manifest "\"pinPolicy\": \"pinned-ref\"",
-                      requireSubstring "manifest input rev" manifest "\"rev\"",
-                      requireSubstring "manifest input narHash" manifest "\"narHash\"",
                       requireSubstring "manifest packages" manifest "\"helloWrapper\"",
                       requireSubstring "manifest packages" manifest "\"helloTool\"",
                       requireSubstring "manifest apps/checks" manifest "\"packageName\": \"helloWrapper\"",
@@ -184,7 +212,7 @@ def verifyShowcaseArtifact (artifactDir : String) : IO (Except String Unit) := d
                       requireSubstring "artifact flake default package" flake
                         "\"default\" = self.packages.${system}.\"helloWrapper\";",
                       requireSubstring "artifact flake check" flake "\"default\" = pkgs.runCommand"
-                    ]
+                    ] ++ inputPolicyChecks
                     match firstError checks with
                     | some error => pure (.error error)
                     | none => do

@@ -297,6 +297,75 @@ fn run_artifact_policy_rejection_case(repo: &Path) -> Result<(), String> {
     )
 }
 
+fn lockfile_witness_manifest(manifest: &str) -> String {
+    manifest
+        .replace(
+            "\"trustClass\": \"pinned-flake-input\"",
+            "\"trustClass\": \"lockfile-backed-flake-input\"",
+        )
+        .replace("\"pinPolicy\": \"pinned-ref\"", "\"pinPolicy\": \"lockfile-witness\"")
+        .replace(
+            "      \"rev\": \"549bd84d6279f9852cae6225e372cc67fb91a4c1\",\n      \"narHash\": \"sha256-hGdgeU2Nk87RAuZyYjyDjFL6LK7dAZN5RE9+hrDTkDU=\"",
+            "      \"lockfile\": \"flake.lock\",\n      \"lockfileNode\": \"nixpkgs\",\n      \"lockedRev\": \"549bd84d6279f9852cae6225e372cc67fb91a4c1\",\n      \"lockedNarHash\": \"sha256-hGdgeU2Nk87RAuZyYjyDjFL6LK7dAZN5RE9+hrDTkDU=\"",
+        )
+}
+
+fn run_artifact_lockfile_witness_case(repo: &Path) -> Result<(), String> {
+    let artifact_dir = "generated/lockfile-witness-artifact";
+    eprintln!("case: artifact lockfile witness acceptance");
+    run(
+        repo,
+        "lake",
+        &["exe", "leanix", "emit-artifact", "--out", artifact_dir],
+    )?;
+
+    let manifest_path = repo.join(artifact_dir).join("leanix.manifest.json");
+    let manifest = fs::read_to_string(&manifest_path)
+        .map_err(|err| format!("failed reading {}: {err}", manifest_path.display()))?;
+    fs::write(&manifest_path, lockfile_witness_manifest(&manifest))
+        .map_err(|err| format!("failed writing {}: {err}", manifest_path.display()))?;
+    run(
+        repo,
+        "lake",
+        &["exe", "leanix", "verify-artifact", artifact_dir],
+    )?;
+
+    let missing_witness_artifact_dir = "generated/missing-lockfile-witness-artifact";
+    eprintln!("case: artifact missing lockfile witness rejection");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "emit-artifact",
+            "--out",
+            missing_witness_artifact_dir,
+        ],
+    )?;
+    let missing_manifest_path = repo
+        .join(missing_witness_artifact_dir)
+        .join("leanix.manifest.json");
+    let missing_manifest = fs::read_to_string(&missing_manifest_path)
+        .map_err(|err| format!("failed reading {}: {err}", missing_manifest_path.display()))?;
+    let missing_manifest = missing_manifest
+        .replace(
+            "\"trustClass\": \"pinned-flake-input\"",
+            "\"trustClass\": \"lockfile-backed-flake-input\"",
+        )
+        .replace(
+            "\"pinPolicy\": \"pinned-ref\"",
+            "\"pinPolicy\": \"lockfile-witness\"",
+        );
+    fs::write(&missing_manifest_path, missing_manifest)
+        .map_err(|err| format!("failed writing {}: {err}", missing_manifest_path.display()))?;
+    expect_verify_artifact_failure(
+        repo,
+        missing_witness_artifact_dir,
+        "error: artifact input policy rejected: lockfile-backed flake inputs require lockfile witness metadata",
+    )
+}
+
 fn run_source_injection_case(repo: &Path) -> Result<(), String> {
     let output = "generated/source-injection-flake.nix";
     eprintln!("case: source argument escaping");
@@ -1016,6 +1085,7 @@ fn main() -> Result<(), String> {
 
     run_artifact_case(&repo)?;
     run_artifact_policy_rejection_case(&repo)?;
+    run_artifact_lockfile_witness_case(&repo)?;
     run_source_injection_case(&repo)?;
     run_build_plan_text_file_case(&repo)?;
     run_hashed_source_case(&repo)?;

@@ -24,8 +24,9 @@ argument records for the structured plans.
 
 Artifact input policy is stricter than development rendering. Development flakes
 can remain ergonomic with floating refs, while proof-carrying artifacts record
-pinned revision/hash metadata and reject floating flake inputs unless a future
-lockfile witness is present.
+pinned revision/hash metadata or explicit lockfile witness metadata. Floating
+flake inputs without either form of evidence are rejected by
+`leanix verify-artifact`.
 
 Artifact verification also reads manifest-declared generated files and file
 hashes before replaying showcase checks, so tampered or missing generated files

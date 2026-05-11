@@ -48,6 +48,10 @@ nix flake check path:./generated/showcase-artifact
 verifies that every path listed in `generatedFiles` exists and that files listed
 in `fileHashes` still match their recorded Leanix content hash. This catches
 tampered or missing generated files before running the artifact replay commands.
+For flake inputs, the verifier distinguishes directly pinned inputs from
+lockfile-backed inputs. A lockfile-backed input must carry lockfile witness
+metadata in the manifest; Leanix checks for that metadata but does not resolve
+or update the lockfile itself.
 
 ## Source
 

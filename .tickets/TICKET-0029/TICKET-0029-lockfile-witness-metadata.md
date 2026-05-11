@@ -70,4 +70,17 @@ Define and verify the first lockfile witness metadata for artifact inputs.
 - `blog/yyyy-mm-dd-hh-mm-lockfile-witness-metadata.md`
 
 ## Progress
-- Not started.
+- Added lockfile witness fields to `ArtifactInput`: `lockfile`,
+  `lockfileNode`, `lockedRev`, and `lockedNarHash`.
+- Added artifact verifier policy handling for
+  `lockfile-backed-flake-input`.
+- Preserved rejection for unsupported `floating-flake-input`.
+- Added e2e coverage where a lockfile-backed artifact manifest verifies with
+  witness metadata.
+- Added e2e coverage where a lockfile-backed artifact manifest fails without
+  witness metadata.
+- Updated PoC docs, README artifact policy notes, showcase artifact docs, and
+  added a dated blog note.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

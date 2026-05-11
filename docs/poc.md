@@ -112,8 +112,15 @@ are excluded from the flake output argument set.
 Input policy is split by context. Development flakes may use floating flake
 refs, and Nix can create or update `flake.lock` during normal local checks.
 Proof-carrying artifacts are stricter: a flake input must either carry a pinned
-revision plus hash in the manifest or, in a future slice, record a concrete
-lockfile witness. Floating artifact inputs are rejected by `verify-artifact`.
+revision plus hash in the manifest or record concrete lockfile witness metadata.
+Floating artifact inputs without either form of evidence are rejected by
+`verify-artifact`.
+
+Lockfile-backed inputs are a separate trust class from directly pinned inputs.
+The current witness records a lockfile path, lockfile node name, locked revision,
+and locked hash. Leanix verifies that those witness fields are present when the
+manifest claims `lockfile-backed-flake-input`; it does not run `nix flake lock`
+or resolve floating refs itself.
 
 The internal build-expression renderer still uses a finite depth guard, but
 exhaustion is now a Lean-side `Except` error. It no longer emits a latent
@@ -161,11 +168,12 @@ tamper detection, not a cryptographic signature scheme.
 
 After that generic preflight, the verifier still checks the current showcase
 contract: expected systems, packages, app/check references, default package
-alias, invariant names, source elaboration, and `nix flake check path:.`
-replay. The Rust e2e harness calls that same verifier path, including tampered
-and missing-file rejection cases. Nix remains the external witness for
-evaluating and building the rendered flake; Leanix does not claim to prove Nix
-evaluation.
+alias, invariant names, input trust class, source elaboration, and
+`nix flake check path:.` replay. The Rust e2e harness calls that same verifier
+path, including tampered, missing-file, floating-input, accepted lockfile
+witness, and missing-witness rejection cases. Nix remains the external witness
+for evaluating and building the rendered flake; Leanix does not claim to prove
+Nix evaluation.
 
 ## Builder Boundary
 

@@ -9,6 +9,9 @@ structure ArtifactInput where
   pinPolicy : String
   url : String
   lockfile? : Option String := none
+  lockfileNode? : Option String := none
+  lockedRev? : Option String := none
+  lockedNarHash? : Option String := none
   rev? : Option String := none
   narHash? : Option String := none
   deriving Repr, BEq
@@ -101,6 +104,9 @@ def ArtifactInput.toJsonLines (input : ArtifactInput) : List String :=
     jsonField "url" (jsonString input.url)
   ] ++
   optionalJsonField "lockfile" input.lockfile? ++
+  optionalJsonField "lockfileNode" input.lockfileNode? ++
+  optionalJsonField "lockedRev" input.lockedRev? ++
+  optionalJsonField "lockedNarHash" input.lockedNarHash? ++
   optionalJsonField "rev" input.rev? ++
   optionalJsonField "narHash" input.narHash?
 
