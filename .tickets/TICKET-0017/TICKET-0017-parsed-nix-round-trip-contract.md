@@ -42,3 +42,25 @@ AST isomorphism.
    two repositories.
 4. The check is still narrow about what it proves: generated flake shape, not
    real nixpkgs evaluation.
+
+## Plan
+1. Consume nixparserlean's existing `--desugar --format json` output in the
+   Rust e2e interop path.
+2. Define a small expected-output contract for selected Leanix examples:
+   systems, package/app/dev-shell/check names, and default package targets.
+3. Check hello, CLI schema, showcase, and multi-system generated flakes against
+   that parsed JSON.
+4. Keep the claim narrow and document that this is generated flake shape, not
+   Nix semantic equivalence.
+
+## Progress
+- Added parsed-output contracts to the Rust nixparserlean interop path.
+- Contracts cover hello, CLI schema, showcase, and multi-system examples.
+- Added `render-multi-system` to the nixparserlean interop suite.
+- Added a negative assertion proving the parsed-output contract rejects a
+  missing package fact.
+- Documented the consumed nixparserlean JSON shape as a narrow interop
+  contract.
+- Verified the targeted `--only-nixparserlean-interop` path.
+- Verified `lake build`.
+- Verified the full Rust e2e run with `--nixparserlean-dir ../nixparserlean`.

@@ -27,6 +27,17 @@ struct InteropCase {
     name: &'static str,
     render_arg: &'static str,
     source_arg: bool,
+    parsed_contract: Option<ParsedOutputContract>,
+}
+
+#[derive(Clone, Copy)]
+struct ParsedOutputContract {
+    systems: &'static [&'static str],
+    packages: &'static [&'static str],
+    apps: &'static [&'static str],
+    dev_shells: &'static [&'static str],
+    checks: &'static [&'static str],
+    default_package_targets: &'static [&'static str],
 }
 
 fn run(repo: &Path, program: &str, args: &[&str]) -> Result<(), String> {
@@ -59,6 +70,27 @@ fn run_quiet(repo: &Path, program: &str, args: &[&str]) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("{program} exited with {status}"))
+    }
+}
+
+fn run_capture(repo: &Path, program: &str, args: &[&str]) -> Result<String, String> {
+    eprintln!("running: {} {}", program, args.join(" "));
+    let output = Command::new(program)
+        .args(args)
+        .current_dir(repo)
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|err| format!("failed to start {program}: {err}"))?;
+
+    if output.status.success() {
+        String::from_utf8(output.stdout)
+            .map_err(|err| format!("{program} produced non-UTF-8 output: {err}"))
+    } else {
+        Err(format!(
+            "{program} exited with {}\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        ))
     }
 }
 
@@ -219,6 +251,96 @@ fn run_hashed_source_case(repo: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn require_json_fragment(json: &str, context: &str, fragment: &str) -> Result<(), String> {
+    if json.contains(fragment) {
+        Ok(())
+    } else {
+        Err(format!(
+            "parsed Nix summary for {context} missing {fragment}"
+        ))
+    }
+}
+
+fn json_static_assign_fragment(name: &str) -> String {
+    format!("\"kind\":\"staticAssign\",\"name\":\"{}\"", name)
+}
+
+fn require_static_assign(json: &str, context: &str, name: &str) -> Result<(), String> {
+    require_json_fragment(json, context, &json_static_assign_fragment(name))
+}
+
+fn require_select_path(json: &str, context: &str, path: &[&str]) -> Result<(), String> {
+    let mut start = 0usize;
+    for name in path {
+        let fragment = format!("\"kind\":\"static\",\"name\":\"{}\"", name);
+        let offset = json[start..].find(&fragment).ok_or_else(|| {
+            format!(
+                "parsed Nix summary for {context} missing select path {:?}",
+                path
+            )
+        })?;
+        start += offset + fragment.len();
+    }
+    Ok(())
+}
+
+fn check_parsed_output_contract(
+    case_name: &str,
+    json: &str,
+    contract: ParsedOutputContract,
+) -> Result<(), String> {
+    if !contract.packages.is_empty() {
+        require_static_assign(json, case_name, "packages")?;
+    }
+    if !contract.apps.is_empty() {
+        require_static_assign(json, case_name, "apps")?;
+    }
+    if !contract.dev_shells.is_empty() {
+        require_static_assign(json, case_name, "devShells")?;
+    }
+    if !contract.checks.is_empty() {
+        require_static_assign(json, case_name, "checks")?;
+    }
+    for system in contract.systems {
+        require_static_assign(json, case_name, system)?;
+    }
+    for package in contract.packages {
+        require_static_assign(json, case_name, package)?;
+    }
+    for app in contract.apps {
+        require_static_assign(json, case_name, app)?;
+    }
+    for shell in contract.dev_shells {
+        require_static_assign(json, case_name, shell)?;
+    }
+    for check in contract.checks {
+        require_static_assign(json, case_name, check)?;
+    }
+    for package in contract.default_package_targets {
+        require_select_path(json, case_name, &["packages", package])?;
+    }
+
+    Ok(())
+}
+
+fn check_parsed_contract_rejects_missing_fact(case_name: &str, json: &str) -> Result<(), String> {
+    let impossible = ParsedOutputContract {
+        systems: &["x86_64-linux"],
+        packages: &["leanixMissingPackageForNegativeCheck"],
+        apps: &[],
+        dev_shells: &[],
+        checks: &[],
+        default_package_targets: &[],
+    };
+
+    match check_parsed_output_contract(case_name, json, impossible) {
+        Ok(()) => Err(format!(
+            "parsed Nix summary contract for {case_name} accepted a missing package"
+        )),
+        Err(_) => Ok(()),
+    }
+}
+
 fn run_interop_case(
     repo: &Path,
     nixparserlean_dir: &Path,
@@ -253,7 +375,7 @@ fn run_interop_case(
     }
 
     eprintln!("interop desugar: {}", case.name);
-    run_quiet(
+    let parsed_json = run_capture(
         nixparserlean_dir,
         "nix",
         &[
@@ -263,10 +385,20 @@ fn run_interop_case(
             "exe",
             "nixparserlean",
             "--desugar",
+            "--format",
+            "json",
             "--file",
             &output_arg,
         ],
     )?;
+
+    if let Some(contract) = case.parsed_contract {
+        eprintln!("interop parsed contract: {}", case.name);
+        check_parsed_output_contract(case.name, &parsed_json, contract)?;
+        if case.name == "hello" {
+            check_parsed_contract_rejects_missing_fact(case.name, &parsed_json)?;
+        }
+    }
 
     eprintln!("interop eval: {}", case.name);
     run_quiet(
@@ -307,26 +439,65 @@ fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<()
             name: "hello",
             render_arg: "render-example",
             source_arg: false,
+            parsed_contract: Some(ParsedOutputContract {
+                systems: &["x86_64-linux"],
+                packages: &["hello"],
+                apps: &["hello", "default"],
+                dev_shells: &["default"],
+                checks: &["hello"],
+                default_package_targets: &["hello"],
+            }),
         },
         InteropCase {
             name: "closure",
             render_arg: "render-closure",
             source_arg: false,
+            parsed_contract: None,
         },
         InteropCase {
             name: "cli-schema",
             render_arg: "render-cli-schema",
             source_arg: false,
+            parsed_contract: Some(ParsedOutputContract {
+                systems: &["x86_64-linux"],
+                packages: &["hello"],
+                apps: &["default"],
+                dev_shells: &["default"],
+                checks: &["default"],
+                default_package_targets: &["hello"],
+            }),
         },
         InteropCase {
             name: "showcase",
             render_arg: "render-showcase",
             source_arg: false,
+            parsed_contract: Some(ParsedOutputContract {
+                systems: &["x86_64-linux"],
+                packages: &["helloWrapper", "helloTool"],
+                apps: &["default"],
+                dev_shells: &["default"],
+                checks: &["default"],
+                default_package_targets: &["helloWrapper"],
+            }),
+        },
+        InteropCase {
+            name: "multi-system",
+            render_arg: "render-multi-system",
+            source_arg: false,
+            parsed_contract: Some(ParsedOutputContract {
+                systems: &["x86_64-linux", "aarch64-linux"],
+                packages: &["hello"],
+                apps: &[],
+                dev_shells: &[],
+                checks: &[],
+                default_package_targets: &["hello"],
+            }),
         },
         InteropCase {
             name: "self",
             render_arg: "render-self",
             source_arg: true,
+            parsed_contract: None,
         },
     ];
 

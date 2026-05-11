@@ -21,12 +21,15 @@ repositories, and not a proof that nixparserlean can execute the generated
 flake against real `nixpkgs`. Today the useful boundary is:
 
 ```text
-Leanix value -> generated flake.nix -> nixparserlean --desugar / --eval
+Leanix value -> generated flake.nix -> nixparserlean --desugar JSON / --eval
 ```
 
-The `--eval` check evaluates the top-level flake record. It can produce an
-`outputs` lambda closure, but it does not apply that closure to real flake
-inputs.
+For selected cases, the Rust harness consumes nixparserlean's
+`--desugar --format json` output and checks a small parsed-output summary:
+output families, systems, package/app/dev-shell/check names, and synthetic
+default-package references. The `--eval` check still evaluates only the
+top-level flake record. It can produce an `outputs` lambda closure, but it does
+not apply that closure to real flake inputs.
 
 ## Layout
 
@@ -72,7 +75,9 @@ explicit skip message for this optional bridge.
 
 The interop suite renders selected Leanix examples into
 `generated/interop-nixparserlean/`, then runs nixparserlean against each
-generated flake with both `--desugar` and `--eval`.
+generated flake with both `--desugar --format json` and `--eval`. Parsed-output
+contracts currently cover the hello, CLI schema, showcase, and multi-system
+examples.
 
 It intentionally does not run `nix flake check`; Leanix's main Rust e2e
 harness already owns the Nix backend smoke test.
@@ -81,9 +86,9 @@ harness already owns the Nix backend smoke test.
 
 - No cross-repo Lean import yet.
 - No shared package or version lock yet.
-- No machine-readable AST contract yet; nixparserlean still prints `repr`.
+- No full shared AST package yet; Leanix consumes nixparserlean's current JSON
+  shape as a narrow interop contract.
 - No full Nix evaluation claim.
 
-The next step is a parsed-output contract: compare a machine-readable
-nixparserlean summary back to the Leanix typed graph rather than only checking
-that generated files desugar and evaluate.
+The next step is to make the parsed summary richer and less string-fragment
+based, ideally with an explicit summary mode in nixparserlean.
