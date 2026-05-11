@@ -259,15 +259,29 @@ namespace PackageClosure
 def packageNames (packages : List (Package system)) : List String :=
   packages.map (fun package => package.name)
 
-def refsResolveBool (packages : List (Package system)) : Bool :=
+def edgeBool (packages : List (Package system)) (fromName toName : String) : Bool :=
+  match findPackageByName? packages fromName with
+  | none => false
+  | some package => (packageDeps package).contains toName
+
+inductive Edge (packages : List (Package system)) (fromName toName : String) : Prop where
+  | checked : edgeBool packages fromName toName = true -> Edge packages fromName toName
+
+def edgeTargetsNamedBool (packages : List (Package system)) : Bool :=
   packages.all fun package =>
     (packageDeps package).all fun packageName =>
       (packageNames packages).contains packageName
+
+def refsResolveBool (packages : List (Package system)) : Bool :=
+  edgeTargetsNamedBool packages
 
 def acyclicByFuelBool (packages : List (Package system)) : Bool :=
   packages.all fun package =>
     (packageDeps package).all fun dep =>
       !(reachesPackageWithFuel packages package.name dep (packages.length + 1))
+
+inductive EdgeTargetsNamed (packages : List (Package system)) : Prop where
+  | checked : edgeTargetsNamedBool packages = true -> EdgeTargetsNamed packages
 
 inductive ReferencesResolve (packages : List (Package system)) : Prop where
   | checked : refsResolveBool packages = true -> ReferencesResolve packages
@@ -279,11 +293,20 @@ def ReferencesResolve.toCheckedBool :
     ReferencesResolve (system := system) packages -> refsResolveBool packages = true
   | .checked proof => proof
 
+def ReferencesResolve.toEdgeTargetsNamed :
+    ReferencesResolve (system := system) packages -> EdgeTargetsNamed packages
+  | .checked proof => .checked proof
+
+def EdgeTargetsNamed.toCheckedBool :
+    EdgeTargetsNamed (system := system) packages -> edgeTargetsNamedBool packages = true
+  | .checked proof => proof
+
 def NoFuelBoundedCycles.toCheckedBool :
     NoFuelBoundedCycles (system := system) packages -> acyclicByFuelBool packages = true
   | .checked proof => proof
 
 structure Valid (packages : List (Package system)) : Prop where
+  edgeTargetsNamed : EdgeTargetsNamed packages
   referencesResolve : ReferencesResolve packages
   noFuelBoundedCycles : NoFuelBoundedCycles packages
 
@@ -296,6 +319,10 @@ structure CheckedPackageGraph (system : System) where
 def CheckedPackageGraph.refsResolve (graph : CheckedPackageGraph system) :
     PackageClosure.refsResolveBool graph.packages = true :=
   graph.valid.referencesResolve.toCheckedBool
+
+def CheckedPackageGraph.edgeTargetsNamed (graph : CheckedPackageGraph system) :
+    PackageClosure.edgeTargetsNamedBool graph.packages = true :=
+  graph.valid.edgeTargetsNamed.toCheckedBool
 
 def CheckedPackageGraph.acyclicByFuel (graph : CheckedPackageGraph system) :
     PackageClosure.acyclicByFuelBool graph.packages = true :=
@@ -314,6 +341,7 @@ def checkPackageGraph (system : System) (packages : List (Package system)) :
       pure {
         packages := packages
         valid := {
+          edgeTargetsNamed := .checked hRefs
           referencesResolve := .checked hRefs
           noFuelBoundedCycles := .checked hAcyclic
         }

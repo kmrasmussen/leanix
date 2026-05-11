@@ -69,4 +69,17 @@ to named closure evidence without making examples brittle.
 - `blog/yyyy-mm-dd-hh-mm-package-closure-graph-relation.md`
 
 ## Progress
-- Not started.
+- Added `PackageClosure.edgeBool` as the executable package-name edge relation.
+- Added `PackageClosure.Edge` as the named proposition for checked package-name
+  edges.
+- Added `PackageClosure.EdgeTargetsNamed` as closure evidence that edge targets
+  are package names in the same graph.
+- Connected `ReferencesResolve` to `EdgeTargetsNamed` with
+  `ReferencesResolve.toEdgeTargetsNamed`.
+- Added `CheckedPackageGraph.edgeTargetsNamed`.
+- Updated `PackageClosure.Valid` and the closure example evidence without
+  introducing brittle proof terms.
+- Updated closure proof strategy docs, PoC docs, and added a dated blog note.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

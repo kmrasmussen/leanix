@@ -79,6 +79,8 @@ and schema failures.
 Package closure also has a checked boundary. `CheckedPackageGraph system`
 carries a package list plus named `PackageClosure.Valid` evidence:
 
+- `PackageClosure.EdgeTargetsNamed`: every package dependency edge points at a
+  package name in the same graph
 - `PackageClosure.ReferencesResolve`: package references in build expressions
   resolve to packages in the same graph
 - `PackageClosure.NoFuelBoundedCycles`: package dependency cycles are absent
@@ -87,8 +89,8 @@ carries a package list plus named `PackageClosure.Valid` evidence:
 
 This is not a proof of Nix evaluation behavior. It is proof data for the Leanix
 graph assumptions the renderer relies on before emitting package entries. The
-current named properties are still produced by the finite checker; the proof
-strategy and next strengthening step are documented in
+current named properties are still produced by executable boolean checks; the
+proof strategy and next strengthening step are documented in
 `docs/closure-proof-strategy.md`.
 
 ## Renderer

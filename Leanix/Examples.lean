@@ -311,6 +311,7 @@ def closureFlake : Flake where
 def closureCheckedPackageGraph : CheckedPackageGraph .x86_64_linux where
   packages := [helloToolPackage, helloWrapperPackage]
   valid := {
+    edgeTargetsNamed := .checked (by native_decide)
     referencesResolve := .checked (by native_decide)
     noFuelBoundedCycles := .checked (by native_decide)
   }
