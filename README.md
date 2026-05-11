@@ -19,6 +19,13 @@ Leanix also has its first typed output schema. `CliProject` lowers a typed
 package/app/dev shell/check contract to ordinary flake outputs after validating
 that the conventional defaults point at the project package.
 
+The schema layer now covers more than the single default CLI shape. Use
+`LibraryProject` when a package is the main output and the schema should enforce
+default dev-shell/check conventions around it. Use `MultiAppProject` when one
+package graph intentionally exposes several app outputs. Drop to raw `Flake`
+and `Outputs` values when the project shape does not fit one of these
+conventions yet.
+
 Schema validation now has an explicit type boundary. Raw schemas become
 `ValidatedSchema` values before they can be lowered through the validated-schema
 API.
@@ -74,6 +81,8 @@ lake build
 lake exe leanix
 lake exe leanix render-example --out generated/flake.nix
 lake exe leanix render-cli-schema --out generated/flake.nix
+lake exe leanix render-library-schema --out generated/flake.nix
+lake exe leanix render-multi-app-schema --out generated/flake.nix
 nix flake check path:./generated
 lake exe leanix render-self --source path:/home/kasper/projects/leanix --out generated/flake.nix
 cargo run --locked --manifest-path e2e/runner/Cargo.toml

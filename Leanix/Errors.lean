@@ -42,6 +42,9 @@ inductive SchemaError where
   | cliProjectDevShellMissingPackage
   | multiSystemNeedsTwoSystems
   | multiSystemSystemInvalid : (system : System) -> (error : String) -> SchemaError
+  | schemaOutputMustBeDefault : (schema : String) -> (family : String) -> SchemaError
+  | schemaMissingPackageRef : (schema : String) -> (owner : String) -> (packageName : String) -> SchemaError
+  | schemaNeedsAtLeast : (schema : String) -> (family : String) -> (count : Nat) -> SchemaError
   deriving Repr, BEq
 
 def SchemaError.toString : SchemaError -> String
@@ -54,6 +57,12 @@ def SchemaError.toString : SchemaError -> String
   | .multiSystemNeedsTwoSystems => "MultiSystemCliProject must include at least two active systems"
   | .multiSystemSystemInvalid system error =>
       s!"MultiSystemCliProject {system.toNixString} invalid: {error}"
+  | .schemaOutputMustBeDefault schema family =>
+      s!"{schema} {family} output must be named default"
+  | .schemaMissingPackageRef schema owner packageName =>
+      s!"{schema} {owner} must point at an existing package {packageName}"
+  | .schemaNeedsAtLeast schema family count =>
+      s!"{schema} must include at least {count} {family}"
 
 instance : ToString SchemaError where
   toString := SchemaError.toString

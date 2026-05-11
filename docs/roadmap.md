@@ -26,7 +26,11 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 - ✅ `MultiSystemCliProject` groups per-system `CliProject` values under one
   logical project name, validates each active system, and lowers to a
   `ValidatedFlake` with at least two active systems.
-- ⬜ Schemas other than CLI projects (libraries and multi-app projects).
+- ✅ `LibraryProject` models package-first library outputs with default
+  dev-shell/check conventions.
+- ✅ `MultiAppProject` models one package graph exposed through several app
+  outputs.
+- ⬜ Formatter-oriented schemas.
 
 ## Phase 2: Reproducibility Model — 🟡
 

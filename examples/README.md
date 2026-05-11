@@ -16,3 +16,10 @@ which demonstrates the renderer's current graph-level multi-system output
 shape, and `leanix render-multi-system-schema --out generated/flake.nix`,
 which demonstrates the typed authoring path for one CLI project across two
 systems.
+
+`leanix render-library-schema --out generated/flake.nix` demonstrates the
+package-first `LibraryProject` schema. `leanix render-multi-app-schema --out
+generated/flake.nix` demonstrates `MultiAppProject`, where several app outputs
+share one package graph. Use these schemas for known conventions; keep using
+raw `Flake` values when experimenting with output shapes Leanix has not named
+yet.

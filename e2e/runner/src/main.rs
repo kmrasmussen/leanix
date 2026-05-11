@@ -689,6 +689,20 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/cli-schema.flake.nix"),
         },
         Case {
+            name: "library schema flake",
+            render_arg: "render-library-schema",
+            source_arg: false,
+            lean_source: None,
+            golden: Some("e2e/golden/library-schema.flake.nix"),
+        },
+        Case {
+            name: "multi-app schema flake",
+            render_arg: "render-multi-app-schema",
+            source_arg: false,
+            lean_source: None,
+            golden: Some("e2e/golden/multi-app-schema.flake.nix"),
+        },
+        Case {
             name: "proof-carrying CLI closure showcase",
             render_arg: "render-showcase",
             source_arg: false,
@@ -770,6 +784,16 @@ fn main() -> Result<(), String> {
             name: "invalid CLI schema",
             render_arg: "render-invalid-cli-schema",
             expected_stderr: "error: CliProject app must point at the project package",
+        },
+        InvalidCase {
+            name: "invalid library schema",
+            render_arg: "render-invalid-library-schema",
+            expected_stderr: "error: LibraryProject devShell output must be named default",
+        },
+        InvalidCase {
+            name: "invalid multi-app schema",
+            render_arg: "render-invalid-multi-app-schema",
+            expected_stderr: "error: MultiAppProject must include at least 2 apps",
         },
         InvalidCase {
             name: "invalid multi-system schema",

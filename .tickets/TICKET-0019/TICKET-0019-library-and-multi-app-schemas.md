@@ -31,3 +31,23 @@ Add typed schema coverage beyond the single default CLI app case.
    every schema.
 4. Documentation explains when to use schemas and when to drop to raw graph
    values.
+
+## Plan
+- Add shared schema validation helpers for conventional default names,
+  package-reference checks, and minimum output counts.
+- Introduce `LibraryProject` for package/check/dev-shell library conventions.
+- Introduce `MultiAppProject` for multiple app outputs over one package graph.
+- Add valid CLI render targets, golden fixtures, invalid CLI targets, Rust e2e
+  assertions, docs, and a dated blog note.
+
+## Progress
+- Added `LibraryProject` and `MultiAppProject` in `Leanix/Schema.lean`, both
+  lowering to ordinary `Outputs` through the existing schema boundary.
+- Added valid and invalid examples in `Leanix/Examples.lean` and CLI commands
+  in `Main.lean`.
+- Added golden fixtures and Rust e2e coverage for both valid schemas and both
+  invalid schema errors.
+- Updated docs to describe schema selection and the raw graph escape hatch.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

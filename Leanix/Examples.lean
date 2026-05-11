@@ -551,5 +551,75 @@ def showcaseFlake : Except String ValidatedFlake := do
   | .ok validatedFlake => pure validatedFlake
   | .error error => throw error.toString
 
+def libraryPackage : Package .x86_64_linux where
+  name := "helloLib"
+  build := .nixpkgs "hello"
+
+def libraryDevShell : DevShell .x86_64_linux where
+  name := "default"
+  packageNames := ["helloLib"]
+
+def libraryCheck : Check .x86_64_linux where
+  name := "default"
+  packageName := "helloLib"
+  command := "hello --version > \"$out\""
+
+def libraryProject : LibraryProject .x86_64_linux where
+  package := libraryPackage
+  devShell := libraryDevShell
+  check := libraryCheck
+
+def librarySchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix library schema example" [("nixpkgs", nixpkgsInput)]
+    libraryProject
+
+def brokenLibraryProject : LibraryProject .x86_64_linux where
+  package := libraryPackage
+  devShell := { libraryDevShell with name := "dev" }
+  check := libraryCheck
+
+def brokenLibrarySchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix invalid library schema example" [("nixpkgs", nixpkgsInput)]
+    brokenLibraryProject
+
+def multiAppHelloApp : App .x86_64_linux where
+  name := "hello"
+  packageName := "helloTool"
+  program := "bin/hello"
+
+def multiAppWrapperApp : App .x86_64_linux where
+  name := "wrapper"
+  packageName := "helloWrapper"
+  program := "bin/hello-wrapper"
+
+def multiAppDevShell : DevShell .x86_64_linux where
+  name := "default"
+  packageNames := ["helloTool", "helloWrapper"]
+
+def multiAppCheck : Check .x86_64_linux where
+  name := "wrapper"
+  packageName := "helloWrapper"
+  command := "hello-wrapper > \"$out\""
+
+def multiAppProject : MultiAppProject .x86_64_linux where
+  packages := [helloToolPackage, helloWrapperPackage]
+  apps := [multiAppHelloApp, multiAppWrapperApp]
+  devShells := [multiAppDevShell]
+  checks := [multiAppCheck]
+
+def multiAppSchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix multi-app schema example" [("nixpkgs", nixpkgsInput)]
+    multiAppProject
+
+def brokenMultiAppProject : MultiAppProject .x86_64_linux where
+  packages := [helloToolPackage, helloWrapperPackage]
+  apps := [multiAppHelloApp]
+  devShells := [multiAppDevShell]
+  checks := [multiAppCheck]
+
+def brokenMultiAppSchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix invalid multi-app schema example" [("nixpkgs", nixpkgsInput)]
+    brokenMultiAppProject
+
 end Examples
 end Leanix

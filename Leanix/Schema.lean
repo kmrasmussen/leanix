@@ -21,6 +21,30 @@ def ValidatedSchema.outputs [FlakeSchema schema] (validated : ValidatedSchema sc
     Outputs :=
   schemaOutputs validated.value
 
+def schemaPackageNames (packages : List (Package system)) : List String :=
+  packages.map (fun package => package.name)
+
+def validateSchemaDefaultName (schema : String) (family : String) (name : String) :
+    Except SchemaError Unit := do
+  if name == "default" then
+    pure ()
+  else
+    throw (.schemaOutputMustBeDefault schema family)
+
+def validateSchemaPackageRef (schema : String) (owner : String) (packageNames : List String)
+    (packageName : String) : Except SchemaError Unit := do
+  if packageNames.contains packageName then
+    pure ()
+  else
+    throw (.schemaMissingPackageRef schema owner packageName)
+
+def validateSchemaMinCount (schema : String) (family : String) (count actual : Nat) :
+    Except SchemaError Unit := do
+  if actual < count then
+    throw (.schemaNeedsAtLeast schema family count)
+  else
+    pure ()
+
 structure CliProject (system : System) where
   package : Package system
   extraPackages : List (Package system) := []
@@ -137,6 +161,197 @@ instance : FlakeSchema (CliProject system) where
   toOutputs := CliProject.toOutputs
   validate := CliProject.validate
   Valid := CliProject.Valid
+
+structure LibraryProject (system : System) where
+  package : Package system
+  extraPackages : List (Package system) := []
+  devShell : DevShell system
+  check : Check system
+  deriving Repr, BEq
+
+def LibraryProject.packages (project : LibraryProject system) : List (Package system) :=
+  [project.package] ++ project.extraPackages
+
+structure LibraryProject.Valid (project : LibraryProject system) : Prop where
+  devShellIsDefault : project.devShell.name = "default"
+  checkIsDefault : project.check.name = "default"
+  checkPointsAtPackage : project.check.packageName = project.package.name
+  devShellContainsPackage : project.devShell.packageNames.contains project.package.name = true
+
+def LibraryProject.validate (project : LibraryProject system) : Except SchemaError Unit := do
+  validateSchemaDefaultName "LibraryProject" "devShell" project.devShell.name
+  validateSchemaDefaultName "LibraryProject" "check" project.check.name
+  let packageNames := schemaPackageNames project.packages
+  validateSchemaPackageRef "LibraryProject" s!"check {project.check.name}" packageNames
+    project.check.packageName
+  for packageName in project.devShell.packageNames do
+    validateSchemaPackageRef "LibraryProject" s!"devShell {project.devShell.name}" packageNames
+      packageName
+  if project.check.packageName == project.package.name then
+    pure ()
+  else
+    throw (.schemaMissingPackageRef "LibraryProject" s!"check {project.check.name}"
+      project.package.name)
+  if project.devShell.packageNames.contains project.package.name then
+    pure ()
+  else
+    throw (.schemaMissingPackageRef "LibraryProject" s!"devShell {project.devShell.name}"
+      project.package.name)
+
+def LibraryProject.toOutputs : {system : System} -> LibraryProject system -> Outputs
+  | .x86_64_linux, project => {
+      packages
+        | .x86_64_linux => project.packages
+        | _ => []
+      apps := fun _ => []
+      devShells
+        | .x86_64_linux => [project.devShell]
+        | _ => []
+      checks
+        | .x86_64_linux => [project.check]
+        | _ => []
+    }
+  | .aarch64_linux, project => {
+      packages
+        | .aarch64_linux => project.packages
+        | _ => []
+      apps := fun _ => []
+      devShells
+        | .aarch64_linux => [project.devShell]
+        | _ => []
+      checks
+        | .aarch64_linux => [project.check]
+        | _ => []
+    }
+  | .x86_64_darwin, project => {
+      packages
+        | .x86_64_darwin => project.packages
+        | _ => []
+      apps := fun _ => []
+      devShells
+        | .x86_64_darwin => [project.devShell]
+        | _ => []
+      checks
+        | .x86_64_darwin => [project.check]
+        | _ => []
+    }
+  | .aarch64_darwin, project => {
+      packages
+        | .aarch64_darwin => project.packages
+        | _ => []
+      apps := fun _ => []
+      devShells
+        | .aarch64_darwin => [project.devShell]
+        | _ => []
+      checks
+        | .aarch64_darwin => [project.check]
+        | _ => []
+    }
+
+instance : FlakeSchema (LibraryProject system) where
+  toOutputs := LibraryProject.toOutputs
+  validate := LibraryProject.validate
+  Valid := LibraryProject.Valid
+
+structure MultiAppProject (system : System) where
+  packages : List (Package system)
+  apps : List (App system)
+  devShells : List (DevShell system) := []
+  checks : List (Check system) := []
+  deriving Repr, BEq
+
+def MultiAppProject.appRefsResolveBool (project : MultiAppProject system) : Bool :=
+  let packageNames := schemaPackageNames project.packages
+  project.apps.all (fun app => packageNames.contains app.packageName)
+
+def MultiAppProject.devShellRefsResolveBool (project : MultiAppProject system) : Bool :=
+  let packageNames := schemaPackageNames project.packages
+  project.devShells.all (fun shell =>
+    shell.packageNames.all (fun packageName => packageNames.contains packageName))
+
+def MultiAppProject.checkRefsResolveBool (project : MultiAppProject system) : Bool :=
+  let packageNames := schemaPackageNames project.packages
+  project.checks.all (fun check => packageNames.contains check.packageName)
+
+structure MultiAppProject.Valid (project : MultiAppProject system) : Prop where
+  hasMultipleApps : 2 <= project.apps.length
+  appsResolve : project.appRefsResolveBool = true
+  devShellsResolve : project.devShellRefsResolveBool = true
+  checksResolve : project.checkRefsResolveBool = true
+
+def MultiAppProject.validate (project : MultiAppProject system) : Except SchemaError Unit := do
+  validateSchemaMinCount "MultiAppProject" "apps" 2 project.apps.length
+  let packageNames := schemaPackageNames project.packages
+  for app in project.apps do
+    validateSchemaPackageRef "MultiAppProject" s!"app {app.name}" packageNames app.packageName
+  for shell in project.devShells do
+    for packageName in shell.packageNames do
+      validateSchemaPackageRef "MultiAppProject" s!"devShell {shell.name}" packageNames packageName
+  for check in project.checks do
+    validateSchemaPackageRef "MultiAppProject" s!"check {check.name}" packageNames check.packageName
+
+def MultiAppProject.toOutputs : {system : System} -> MultiAppProject system -> Outputs
+  | .x86_64_linux, project => {
+      packages
+        | .x86_64_linux => project.packages
+        | _ => []
+      apps
+        | .x86_64_linux => project.apps
+        | _ => []
+      devShells
+        | .x86_64_linux => project.devShells
+        | _ => []
+      checks
+        | .x86_64_linux => project.checks
+        | _ => []
+    }
+  | .aarch64_linux, project => {
+      packages
+        | .aarch64_linux => project.packages
+        | _ => []
+      apps
+        | .aarch64_linux => project.apps
+        | _ => []
+      devShells
+        | .aarch64_linux => project.devShells
+        | _ => []
+      checks
+        | .aarch64_linux => project.checks
+        | _ => []
+    }
+  | .x86_64_darwin, project => {
+      packages
+        | .x86_64_darwin => project.packages
+        | _ => []
+      apps
+        | .x86_64_darwin => project.apps
+        | _ => []
+      devShells
+        | .x86_64_darwin => project.devShells
+        | _ => []
+      checks
+        | .x86_64_darwin => project.checks
+        | _ => []
+    }
+  | .aarch64_darwin, project => {
+      packages
+        | .aarch64_darwin => project.packages
+        | _ => []
+      apps
+        | .aarch64_darwin => project.apps
+        | _ => []
+      devShells
+        | .aarch64_darwin => project.devShells
+        | _ => []
+      checks
+        | .aarch64_darwin => project.checks
+        | _ => []
+    }
+
+instance : FlakeSchema (MultiAppProject system) where
+  toOutputs := MultiAppProject.toOutputs
+  validate := MultiAppProject.validate
+  Valid := MultiAppProject.Valid
 
 structure MultiSystemCliProject where
   name : String

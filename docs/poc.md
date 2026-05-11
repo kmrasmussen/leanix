@@ -30,6 +30,14 @@ Two more elaborate examples build on the same model:
   takes it through `CliProject.validateChecked` to get a proof-carrying
   `ValidatedSchema`, and then lowers to a `ValidatedFlake`. This is the current
   showcase under `examples/proof-carrying-cli-closure/`.
+- `libraryProject` uses `LibraryProject` for package-first projects that still
+  want default dev-shell and check conventions.
+- `multiAppProject` uses `MultiAppProject` for a single package graph that
+  exposes multiple app outputs.
+
+Use a schema when the project matches a known convention and Leanix should name
+that convention in validation errors. Use raw `Flake` and `Outputs` values when
+the shape is still experimental or deliberately outside the schema vocabulary.
 
 There is also a `selfFlakeWithSource` example: the CLI renders a flake that
 imports the Leanix repository as a `localDevSource` input, copies it with a
@@ -51,6 +59,10 @@ structured build step, and runs a structured Lean-project build inside
 - for `CliProject`: app/dev-shell/check are named `default`; app and check
   point at the project package; the dev shell contains the project package.
   These are recorded as proof fields on `ValidatedSchema (CliProject system)`.
+- for `LibraryProject`: dev shell and check are named `default`, and both point
+  at the library package.
+- for `MultiAppProject`: at least two app outputs exist, and app, dev-shell,
+  and check references resolve inside the same package graph.
 
 Graph validation reports `ValidateError` values, and schema validation reports
 `SchemaError` values. The CLI renders those values to plain text for humans,
@@ -168,6 +180,10 @@ term source of build semantics.
 - `leanix render-example --out FILE` — typed `hello`
 - `leanix render-closure --out FILE` — typed package closure
 - `leanix render-cli-schema --out FILE` — `CliProject` lowered to a flake
+- `leanix render-library-schema --out FILE` — `LibraryProject` lowered to a
+  package-first schema flake
+- `leanix render-multi-app-schema --out FILE` — `MultiAppProject` lowered to a
+  multi-app schema flake
 - `leanix render-showcase --out FILE` — proof-carrying CLI closure showcase
 - `leanix render-multi-system --out FILE` — graph-level two-system flake
 - `leanix render-multi-system-schema --out FILE` — schema-authored two-system
@@ -177,6 +193,8 @@ term source of build semantics.
 - `leanix emit-showcase-artifact --out DIR` — explicit showcase artifact alias
 - `leanix verify-artifact DIR` — replay the current showcase artifact contract
 - `leanix render-invalid-cli-schema --out FILE`
+- `leanix render-invalid-library-schema --out FILE`
+- `leanix render-invalid-multi-app-schema --out FILE`
 - `leanix render-invalid-multi-system-schema --out FILE`
 - `leanix render-invalid-missing-ref --out FILE`
 - `leanix render-invalid-cycle --out FILE`
@@ -198,6 +216,8 @@ asserts they exit non-zero.
    `x86_64-linux` and `aarch64-linux` package outputs. The
    `render-multi-system-schema` case pins the schema-level authoring path,
    where one logical CLI project lowers into those per-system outputs.
+   `render-library-schema` and `render-multi-app-schema` pin the newer schema
+   vocabulary beyond the CLI default case.
 2. For each invalid case: invoke `lake exe leanix`, assert non-zero exit, and
    compare exact stderr for the expected error class.
 3. For the showcase only: also `lake env lean` the standalone Lean excerpt at
