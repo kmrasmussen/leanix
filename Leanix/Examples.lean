@@ -305,8 +305,8 @@ def closureFlake : Flake where
 def closureCheckedPackageGraph : CheckedPackageGraph .x86_64_linux where
   packages := [helloToolPackage, helloWrapperPackage]
   valid := {
-    refsResolve := by native_decide
-    acyclicByFuel := by native_decide
+    referencesResolve := .checked (by native_decide)
+    noFuelBoundedCycles := .checked (by native_decide)
   }
 
 def missingRefPackage : Package .x86_64_linux where

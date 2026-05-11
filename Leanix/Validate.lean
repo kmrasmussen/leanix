@@ -243,9 +243,23 @@ def acyclicByFuelBool (packages : List (Package system)) : Bool :=
     (packageDeps package).all fun dep =>
       !(reachesPackageWithFuel packages package.name dep (packages.length + 1))
 
+inductive ReferencesResolve (packages : List (Package system)) : Prop where
+  | checked : refsResolveBool packages = true -> ReferencesResolve packages
+
+inductive NoFuelBoundedCycles (packages : List (Package system)) : Prop where
+  | checked : acyclicByFuelBool packages = true -> NoFuelBoundedCycles packages
+
+def ReferencesResolve.toCheckedBool :
+    ReferencesResolve (system := system) packages -> refsResolveBool packages = true
+  | .checked proof => proof
+
+def NoFuelBoundedCycles.toCheckedBool :
+    NoFuelBoundedCycles (system := system) packages -> acyclicByFuelBool packages = true
+  | .checked proof => proof
+
 structure Valid (packages : List (Package system)) : Prop where
-  refsResolve : refsResolveBool packages = true
-  acyclicByFuel : acyclicByFuelBool packages = true
+  referencesResolve : ReferencesResolve packages
+  noFuelBoundedCycles : NoFuelBoundedCycles packages
 
 end PackageClosure
 
@@ -255,11 +269,11 @@ structure CheckedPackageGraph (system : System) where
 
 def CheckedPackageGraph.refsResolve (graph : CheckedPackageGraph system) :
     PackageClosure.refsResolveBool graph.packages = true :=
-  graph.valid.refsResolve
+  graph.valid.referencesResolve.toCheckedBool
 
 def CheckedPackageGraph.acyclicByFuel (graph : CheckedPackageGraph system) :
     PackageClosure.acyclicByFuelBool graph.packages = true :=
-  graph.valid.acyclicByFuel
+  graph.valid.noFuelBoundedCycles.toCheckedBool
 
 def checkPackageGraph (system : System) (packages : List (Package system)) :
     Except ValidateError (CheckedPackageGraph system) := do
@@ -274,8 +288,8 @@ def checkPackageGraph (system : System) (packages : List (Package system)) :
       pure {
         packages := packages
         valid := {
-          refsResolve := hRefs
-          acyclicByFuel := hAcyclic
+          referencesResolve := .checked hRefs
+          noFuelBoundedCycles := .checked hAcyclic
         }
       }
     else

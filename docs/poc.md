@@ -72,16 +72,19 @@ while the Rust e2e harness asserts exact error output for representative graph
 and schema failures.
 
 Package closure also has a checked boundary. `CheckedPackageGraph system`
-carries a package list plus `PackageClosure.Valid` evidence:
+carries a package list plus named `PackageClosure.Valid` evidence:
 
-- package references in build expressions resolve to packages in the same
-  graph
-- package dependency cycles are absent according to the same finite
+- `PackageClosure.ReferencesResolve`: package references in build expressions
+  resolve to packages in the same graph
+- `PackageClosure.NoFuelBoundedCycles`: package dependency cycles are absent
+  according to the same finite
   `packages.length + 1` reachability check used by validation
 
-This is not a proof of Nix evaluation behavior. It is proof data for the
-Leanix graph assumptions the renderer relies on before emitting package
-entries.
+This is not a proof of Nix evaluation behavior. It is proof data for the Leanix
+graph assumptions the renderer relies on before emitting package entries. The
+current named properties are still produced by the finite checker; the proof
+strategy and next strengthening step are documented in
+`docs/closure-proof-strategy.md`.
 
 ## Renderer
 

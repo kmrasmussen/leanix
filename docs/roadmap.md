@@ -77,6 +77,10 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   consumes that checked boundary instead of accepting raw `Flake` values.
 - ✅ `CliProject.validate` and `CliProject.validateChecked` share the same
   witness-producing condition list.
+- 🟡 `PackageClosure.Valid` carries named closure properties
+  (`ReferencesResolve` and `NoFuelBoundedCycles`) instead of exposing only raw
+  boolean equality fields; the current constructors are still backed by the
+  finite checker.
 - ⬜ Prove that successful validation implies renderable output for the
   supported Nix backend subset.
 - ⬜ Prove `validateNoPackageCycles` is sound and complete (it is fuel-bounded
