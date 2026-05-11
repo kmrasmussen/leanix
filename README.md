@@ -96,6 +96,8 @@ lakefile.lean    -- Lean package
 ```sh
 lake build
 lake exe leanix
+lake exe leanix list-examples
+lake exe leanix render hello --out generated/flake.nix
 lake exe leanix render-example --out generated/flake.nix
 lake exe leanix render-cli-schema --out generated/flake.nix
 lake exe leanix render-library-schema --out generated/flake.nix

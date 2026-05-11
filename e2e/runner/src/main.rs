@@ -831,6 +831,51 @@ fn run_invalid_case(repo: &Path, case: &InvalidCase) -> Result<(), String> {
     }
 }
 
+fn run_registry_case(repo: &Path) -> Result<(), String> {
+    eprintln!("case: CLI example registry");
+    let list = run_capture(repo, "lake", &["exe", "leanix", "list-examples"])?;
+    for expected in ["hello", "showcase", "multi-system-schema", "self"] {
+        if !list.lines().any(|line| line == expected) {
+            return Err(format!("example registry missing {expected}"));
+        }
+    }
+
+    let output = "generated/registry-flake.nix";
+    run(
+        repo,
+        "lake",
+        &["exe", "leanix", "render", "hello", "--out", output],
+    )?;
+    compare_file(repo, output, "e2e/golden/hello.flake.nix")?;
+
+    let missing = Command::new("lake")
+        .args([
+            "exe",
+            "leanix",
+            "render",
+            "missing-example",
+            "--out",
+            "generated/missing-registry.flake.nix",
+        ])
+        .current_dir(repo)
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|err| format!("failed to start lake: {err}"))?;
+    if missing.status.success() {
+        return Err("unknown registry example unexpectedly rendered successfully".to_string());
+    }
+    let stderr = String::from_utf8_lossy(&missing.stderr);
+    let actual = stderr.trim();
+    let expected = "error: unknown example missing-example";
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(format!(
+            "unknown registry example stderr mismatch\nexpected: {expected}\nactual: {actual}"
+        ))
+    }
+}
+
 fn usage() -> &'static str {
     "usage: leanix-e2e-runner [--repo PATH] [--nixparserlean-dir PATH] [--only-nixparserlean-interop]\n       leanix-e2e-runner --help"
 }
@@ -1152,6 +1197,7 @@ fn main() -> Result<(), String> {
     run_artifact_policy_rejection_case(&repo)?;
     run_artifact_lockfile_witness_case(&repo)?;
     run_source_injection_case(&repo)?;
+    run_registry_case(&repo)?;
     run_build_plan_text_file_case(&repo)?;
     run_hashed_source_case(&repo)?;
 

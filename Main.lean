@@ -1,7 +1,7 @@
 import Leanix
 
 def usage : String :=
-  "usage:\n  leanix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-build-plan-text-file --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-formatter-schema --out generated/flake.nix\n  leanix render-library-schema --out generated/flake.nix\n  leanix render-multi-app-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-escaping --out generated/flake.nix\n  leanix render-multi-system --out generated/flake.nix\n  leanix render-multi-system-schema --out generated/flake.nix\n  leanix render-pinned-inputs --out generated/flake.nix\n  leanix render-hashed-source --source path:/absolute/source --out generated/flake.nix\n  leanix render-env --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix\n  leanix emit-artifact --out generated/showcase-artifact\n  leanix emit-showcase-artifact --out generated/showcase-artifact\n  leanix emit-raw-check-artifact --out generated/raw-check-artifact\n  leanix verify-artifact DIR\n  leanix render-invalid-library-schema --out generated/flake.nix\n  leanix render-invalid-formatter-schema --out generated/flake.nix\n  leanix render-invalid-multi-app-schema --out generated/flake.nix\n  leanix render-invalid-build-plan-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-input-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-args --out generated/flake.nix\n  leanix render-invalid-typed-text-ref --out generated/flake.nix\n  leanix render-invalid-typed-check-ref --out generated/flake.nix\n  leanix render-invalid-duplicate-package-env --out generated/flake.nix\n  leanix render-invalid-duplicate-shell-env --out generated/flake.nix\n  leanix render-invalid-unsupported-env-builder --out generated/flake.nix\n  leanix render-invalid-multi-system-schema --out generated/flake.nix\n  leanix render-invalid-source-missing-hash --out generated/flake.nix"
+  "usage:\n  leanix\n  leanix list-examples\n  leanix render NAME --out generated/flake.nix\n  leanix render-example NAME --out generated/flake.nix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-build-plan-text-file --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-formatter-schema --out generated/flake.nix\n  leanix render-library-schema --out generated/flake.nix\n  leanix render-multi-app-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-escaping --out generated/flake.nix\n  leanix render-multi-system --out generated/flake.nix\n  leanix render-multi-system-schema --out generated/flake.nix\n  leanix render-pinned-inputs --out generated/flake.nix\n  leanix render-hashed-source --source path:/absolute/source --out generated/flake.nix\n  leanix render-env --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix\n  leanix emit-artifact --out generated/showcase-artifact\n  leanix emit-showcase-artifact --out generated/showcase-artifact\n  leanix emit-raw-check-artifact --out generated/raw-check-artifact\n  leanix verify-artifact DIR\n  leanix render-invalid-library-schema --out generated/flake.nix\n  leanix render-invalid-formatter-schema --out generated/flake.nix\n  leanix render-invalid-multi-app-schema --out generated/flake.nix\n  leanix render-invalid-build-plan-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-input-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-args --out generated/flake.nix\n  leanix render-invalid-typed-text-ref --out generated/flake.nix\n  leanix render-invalid-typed-check-ref --out generated/flake.nix\n  leanix render-invalid-duplicate-package-env --out generated/flake.nix\n  leanix render-invalid-duplicate-shell-env --out generated/flake.nix\n  leanix render-invalid-unsupported-env-builder --out generated/flake.nix\n  leanix render-invalid-multi-system-schema --out generated/flake.nix\n  leanix render-invalid-source-missing-hash --out generated/flake.nix"
 
 partial def startsWithChars : List Char -> List Char -> Bool
   | [], _ => true
@@ -250,6 +250,57 @@ def renderExceptToFile {error : Type} [ToString error] (flake : Except error Lea
       IO.eprintln s!"error: {error}"
       pure 1
 
+def exampleNames : List String := [
+  "hello",
+  "closure",
+  "build-plan-text-file",
+  "cli-schema",
+  "formatter-schema",
+  "library-schema",
+  "multi-app-schema",
+  "showcase",
+  "escaping",
+  "multi-system",
+  "multi-system-schema",
+  "pinned-inputs",
+  "hashed-source",
+  "env",
+  "self"
+]
+
+def printExampleNames : List String -> IO Unit
+  | [] => pure ()
+  | name :: rest => do
+      IO.println name
+      printExampleNames rest
+
+def listExamples : IO UInt32 := do
+  printExampleNames exampleNames
+  pure 0
+
+def renderRegisteredExample (name outputPath : String) : IO UInt32 := do
+  match name with
+  | "hello" => renderToFile Leanix.Examples.helloFlake outputPath
+  | "closure" => renderToFile Leanix.Examples.closureFlake outputPath
+  | "build-plan-text-file" => renderToFile Leanix.Examples.plannedTextFileFlake outputPath
+  | "cli-schema" => renderExceptToFile Leanix.Examples.helloCliSchemaFlake outputPath
+  | "formatter-schema" => renderExceptToFile Leanix.Examples.formatterSchemaFlake outputPath
+  | "library-schema" => renderExceptToFile Leanix.Examples.librarySchemaFlake outputPath
+  | "multi-app-schema" => renderExceptToFile Leanix.Examples.multiAppSchemaFlake outputPath
+  | "showcase" => renderExceptToFile Leanix.Examples.showcaseFlake outputPath
+  | "escaping" => renderToFile Leanix.Examples.escapingFlake outputPath
+  | "multi-system" => renderToFile Leanix.Examples.multiSystemFlake outputPath
+  | "multi-system-schema" => renderExceptToFile Leanix.Examples.multiSystemSchemaFlake outputPath
+  | "pinned-inputs" => renderToFile Leanix.Examples.pinnedInputFlake outputPath
+  | "hashed-source" =>
+      renderToFile (Leanix.Examples.sourceFixtureFlakeWithSource "path:./e2e/source-fixture")
+        outputPath
+  | "env" => renderToFile Leanix.Examples.envFlake outputPath
+  | "self" => renderToFile (Leanix.Examples.selfFlakeWithSource "path:.") outputPath
+  | _ =>
+      IO.eprintln s!"error: unknown example {name}"
+      pure 1
+
 def emitShowcaseArtifact (outputDir : String) : IO UInt32 := do
   match Leanix.renderShowcaseArtifact with
   | .ok (renderedFlake, manifest) =>
@@ -288,6 +339,12 @@ def main (args : List String) : IO UInt32 := do
   | [] =>
       IO.println "leanix: Nix flakes as Lean-checked build graphs"
       pure 0
+  | ["list-examples"] =>
+      listExamples
+  | ["render", name, "--out", outputPath] =>
+      renderRegisteredExample name outputPath
+  | ["render-example", name, "--out", outputPath] =>
+      renderRegisteredExample name outputPath
   | ["render-example", "--out", outputPath] =>
       renderToFile Leanix.Examples.helloFlake outputPath
   | ["render-closure", "--out", outputPath] =>

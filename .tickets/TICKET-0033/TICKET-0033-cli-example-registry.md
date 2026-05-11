@@ -67,5 +67,24 @@ existing commands compatible.
 - `examples/README.md`
 - `blog/yyyy-mm-dd-hh-mm-cli-example-registry.md`
 
+## Plan
+- Add an explicit example-name registry in the CLI.
+- Add `leanix list-examples` and generic `leanix render NAME --out FILE`
+  commands while preserving all existing `render-*` commands.
+- Cover the registry path in Rust e2e, including the list output, one generic
+  render, and an unknown-name error.
+- Update README, examples docs, PoC docs, and add a dated blog note.
+
 ## Progress
-- Not started.
+- Added `list-examples`, `render NAME --out FILE`, and
+  `render-example NAME --out FILE`.
+- Registered the current renderable examples: `hello`, `closure`,
+  `build-plan-text-file`, `cli-schema`, `formatter-schema`, `library-schema`,
+  `multi-app-schema`, `showcase`, `escaping`, `multi-system`,
+  `multi-system-schema`, `pinned-inputs`, `hashed-source`, `env`, and `self`.
+- Added Rust e2e coverage for registry listing, generic `render hello`, and the
+  exact unknown-example error.
+- Updated README, examples docs, and PoC docs.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

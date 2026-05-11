@@ -251,6 +251,10 @@ behavior of external programs that typed commands invoke.
 `lake exe leanix` exposes the PoC commands (`Main.lean`):
 
 - `leanix` — banner
+- `leanix list-examples` — print registry example names
+- `leanix render NAME --out FILE` — render a registry example
+- `leanix render-example NAME --out FILE` — compatibility alias for registry
+  rendering
 - `leanix render-example --out FILE` — typed `hello`
 - `leanix render-closure --out FILE` — typed package closure
 - `leanix render-build-plan-text-file --out FILE` — `BuildPlan.installTextFile`

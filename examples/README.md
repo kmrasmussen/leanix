@@ -5,6 +5,11 @@ Examples here are user-facing demonstrations of what Leanix can do.
 The Lean source of truth still lives in `Leanix/Examples.lean`; this directory
 explains how to run notable examples and what each one demonstrates.
 
+Use `leanix list-examples` to print the registry of renderable examples. Use
+`leanix render NAME --out generated/flake.nix` for the generic path, or keep
+using the older `render-*` commands when you want the stable compatibility
+spelling used by existing e2e fixtures.
+
 ## Current Showcase
 
 - [proof-carrying-cli-closure](proof-carrying-cli-closure/) demonstrates the
