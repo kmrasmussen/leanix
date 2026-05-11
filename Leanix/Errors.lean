@@ -11,6 +11,7 @@ inductive ValidateError where
   | sourceInputMissingHash : (name : String) -> ValidateError
   | duplicateEnvNames : (system : System) -> (owner : String) -> ValidateError
   | packageEnvUnsupportedBuild : (system : System) -> (packageName : String) -> ValidateError
+  | duplicateBuildPlanArguments : (owner : String) -> ValidateError
   deriving Repr, BEq
 
 def ValidateError.toString : ValidateError -> String
@@ -29,6 +30,8 @@ def ValidateError.toString : ValidateError -> String
       s!"duplicate env var names for {owner} on {system.toNixString}"
   | .packageEnvUnsupportedBuild system packageName =>
       s!"package {packageName} for {system.toNixString} can only set env vars on runCommand or runSteps builders"
+  | .duplicateBuildPlanArguments owner =>
+      s!"duplicate build plan arguments for {owner}"
 
 instance : ToString ValidateError where
   toString := ValidateError.toString

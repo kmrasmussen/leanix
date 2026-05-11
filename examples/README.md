@@ -27,3 +27,7 @@ yet.
 The closure and showcase examples now author `helloWrapper` through
 `helloWrapperPlan`, a `BuildPlan` that lowers to the same generated Nix as the
 previous direct `BuildExpr` version.
+
+That same closure path covers two typed builder identities: `helloToolPlan` is
+a known nixpkgs package identity, and `helloWrapperPlan` is an executable text
+wrapper with named arguments.

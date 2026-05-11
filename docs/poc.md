@@ -149,9 +149,21 @@ to prove Nix evaluation.
 ## Builder Boundary
 
 `BuildPlan` is the first backend-neutral package authoring layer. It names the
-build intention Leanix wants to own, such as using a nixpkgs package, producing
-an executable wrapper for another package, or copying an input tree. Plans expose
-`inputRefs` and `packageRefs` for validation before they lower to `BuildExpr`.
+build intention Leanix wants to own, such as using a known nixpkgs package,
+producing an executable wrapper for another package, or copying an input tree.
+Plans expose `inputRefs` and `packageRefs` for validation before they lower to
+`BuildExpr`.
+
+Builder identity is now represented by the `BuildPlan` constructor instead of
+being inferred only from raw strings. The first typed identities are:
+
+- `BuildPlan.nixpkgsPackage`, backed by `KnownNixpkgsPackage`
+- `BuildPlan.executableTextWrapper`, backed by `ExecutableWrapperArgs`
+- `BuildPlan.copyInputTree`, backed by `CopyInputTreeArgs`
+
+The wrapper and input-copy identities carry named argument structures. Current
+validation rejects duplicate executable-wrapper arguments and missing
+package/input references before lowering to the backend expression.
 
 `BuildExpr` remains the current Nix backend representation. Rendering still
 works from `BuildExpr`, and `Package.fromBuildPlan` is the migration bridge from

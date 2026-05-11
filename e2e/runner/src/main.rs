@@ -770,6 +770,12 @@ fn main() -> Result<(), String> {
                 "error: build plan plannedBroken for x86_64-linux refers to missing package missingPlanDep",
         },
         InvalidCase {
+            name: "duplicate build plan arguments",
+            render_arg: "render-invalid-build-plan-args",
+            expected_stderr:
+                "error: duplicate build plan arguments for build plan duplicateBuildPlanArgs",
+        },
+        InvalidCase {
             name: "duplicate package env",
             render_arg: "render-invalid-duplicate-package-env",
             expected_stderr:

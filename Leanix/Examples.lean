@@ -264,13 +264,20 @@ def pinnedInputFlake : Flake where
   inputs := [("nixpkgs", pinnedNixpkgsInput)]
   outputs := helloOutputs
 
-def helloToolPackage : Package .x86_64_linux where
-  name := "helloTool"
-  build := .nixpkgs "hello"
+def helloToolPlan : BuildPlan :=
+  .nixpkgsPackage .hello
+
+def helloToolPackage : Package .x86_64_linux :=
+  Package.fromBuildPlan "helloTool" helloToolPlan
 
 def helloWrapperPlan : BuildPlan :=
-  .executableTextWrapper "hello-wrapper" "helloTool" "bin/hello" ["--version"]
-    "$out/bin/hello-wrapper"
+  .executableTextWrapper {
+    derivationName := "hello-wrapper"
+    packageName := "helloTool"
+    executablePath := "bin/hello"
+    arguments := ["--version"]
+    destination := "$out/bin/hello-wrapper"
+  }
 
 def helloWrapperPackage : Package .x86_64_linux :=
   Package.fromBuildPlan "helloWrapper" helloWrapperPlan
@@ -345,8 +352,12 @@ def typedTextMissingRefFlake : Flake where
   outputs := typedTextMissingRefOutputs
 
 def brokenBuildPlan : BuildPlan :=
-  .executableTextWrapper "planned-broken" "missingPlanDep" "bin/missing" []
-    "$out/bin/planned-broken"
+  .executableTextWrapper {
+    derivationName := "planned-broken"
+    packageName := "missingPlanDep"
+    executablePath := "bin/missing"
+    destination := "$out/bin/planned-broken"
+  }
 
 def brokenBuildPlanFlake : Except String ValidatedFlake := do
   match validateBuildPlanRefs .x86_64_linux [] ["plannedBroken"] "build plan plannedBroken"
@@ -366,6 +377,38 @@ def brokenBuildPlanFlake : Except String ValidatedFlake := do
         }
       }
       Flake.fromSchema "Leanix invalid build plan example" [("nixpkgs", nixpkgsInput)] project
+  | .error error => throw error.toString
+
+def duplicateBuildPlanArguments : BuildPlan :=
+  .executableTextWrapper {
+    derivationName := "duplicate-build-plan-args"
+    packageName := "helloTool"
+    executablePath := "bin/hello"
+    arguments := ["--version", "--version"]
+    destination := "$out/bin/duplicate-build-plan-args"
+  }
+
+def duplicateBuildPlanArgumentsFlake : Except String ValidatedFlake := do
+  match validateBuildPlanRefs .x86_64_linux [] ["helloTool", "duplicateBuildPlanArgs"]
+      "build plan duplicateBuildPlanArgs" duplicateBuildPlanArguments with
+  | .ok _ =>
+      let package : Package .x86_64_linux :=
+        Package.fromBuildPlan "duplicateBuildPlanArgs" duplicateBuildPlanArguments
+      let project : LibraryProject .x86_64_linux := {
+        package := package
+        extraPackages := [helloToolPackage]
+        devShell := {
+          name := "default"
+          packageNames := ["duplicateBuildPlanArgs"]
+        }
+        check := {
+          name := "default"
+          packageName := "duplicateBuildPlanArgs"
+          command := "touch \"$out\""
+        }
+      }
+      Flake.fromSchema "Leanix invalid build plan arguments example" [("nixpkgs", nixpkgsInput)]
+        project
   | .error error => throw error.toString
 
 def cyclePackageA : Package .x86_64_linux where

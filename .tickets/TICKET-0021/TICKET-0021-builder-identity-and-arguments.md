@@ -30,3 +30,24 @@ Make builder identity and builder arguments explicit typed data.
 3. The renderer preserves builder identity and arguments in generated Nix.
 4. Documentation updates the initial hypothesis with what is now actually
    modeled.
+
+## Plan
+- Refine `BuildPlan` so builder identity is carried by typed constructors and
+  known nixpkgs package identities rather than arbitrary package-attr strings.
+- Move executable-wrapper and input-copy arguments into named structures.
+- Add validation for a simple inspectable argument invariant.
+- Keep lowering to `BuildExpr` so existing renderer goldens prove generated Nix
+  stability.
+- Add/update e2e coverage, docs, and a dated blog note.
+
+## Progress
+- Added typed known nixpkgs package identities and named argument records for
+  executable-wrapper and input-copy build plans.
+- Migrated the closure example's tool package to a typed known nixpkgs identity
+  while keeping the wrapper package on the structured wrapper identity.
+- Added build-plan argument validation for duplicate wrapper arguments and an
+  exact-stderr e2e case.
+- Updated docs and added a dated blog note for the builder identity boundary.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

@@ -52,8 +52,19 @@ def validateBuildPlanPackageRefs (system : System) (packageNames : List String) 
   for packageName in plan.packageRefs do
     validatePackageRef system packageNames owner packageName
 
+def validateBuildPlanArguments (owner : String) (plan : BuildPlan) :
+    Except ValidateError Unit := do
+  match plan with
+  | .executableTextWrapper args =>
+      if hasDuplicateString args.arguments then
+        throw (.duplicateBuildPlanArguments owner)
+      else
+        pure ()
+  | _ => pure ()
+
 def validateBuildPlanRefs (system : System) (inputNames packageNames : List String)
     (owner : String) (plan : BuildPlan) : Except ValidateError Unit := do
+  validateBuildPlanArguments owner plan
   validateBuildPlanInputRefs inputNames plan
   validateBuildPlanPackageRefs system packageNames owner plan
 

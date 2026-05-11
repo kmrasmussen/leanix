@@ -74,20 +74,33 @@ inductive BuildStep where
   deriving Repr, BEq
 end
 
+inductive KnownNixpkgsPackage where
+  | hello
+  | lean4
+  deriving Repr, BEq, DecidableEq
+
+def KnownNixpkgsPackage.toAttr : KnownNixpkgsPackage -> String
+  | .hello => "hello"
+  | .lean4 => "lean4"
+
+structure ExecutableWrapperArgs where
+  derivationName : String
+  packageName : String
+  executablePath : String
+  arguments : List String := []
+  destination : String
+  deriving Repr, BEq
+
+structure CopyInputTreeArgs where
+  derivationName : String
+  inputName : String
+  destination : String
+  deriving Repr, BEq
+
 inductive BuildPlan where
-  | nixpkgsPackage : (attr : String) -> BuildPlan
-  | executableTextWrapper :
-      (builderName : String) ->
-      (packageName : String) ->
-      (executablePath : String) ->
-      (args : List String) ->
-      (destination : String) ->
-      BuildPlan
-  | copyInputTree :
-      (builderName : String) ->
-      (inputName : String) ->
-      (destination : String) ->
-      BuildPlan
+  | nixpkgsPackage : KnownNixpkgsPackage -> BuildPlan
+  | executableTextWrapper : ExecutableWrapperArgs -> BuildPlan
+  | copyInputTree : CopyInputTreeArgs -> BuildPlan
   deriving Repr, BEq
 
 namespace BuildPlan
@@ -104,29 +117,29 @@ def argSuffix (args : List String) : String :=
 
 def inputRefs : BuildPlan -> List String
   | .nixpkgsPackage _ => []
-  | .executableTextWrapper _ _ _ _ _ => []
-  | .copyInputTree _ inputName _ => [inputName]
+  | .executableTextWrapper _ => []
+  | .copyInputTree args => [args.inputName]
 
 def packageRefs : BuildPlan -> List String
   | .nixpkgsPackage _ => []
-  | .executableTextWrapper _ packageName _ _ _ => [packageName]
-  | .copyInputTree _ _ _ => []
+  | .executableTextWrapper args => [args.packageName]
+  | .copyInputTree _ => []
 
 def toBuildExpr : BuildPlan -> BuildExpr
-  | .nixpkgsPackage attr => .nixpkgs attr
-  | .executableTextWrapper builderName packageName executablePath args destination =>
-      .runSteps builderName [.package packageName] [
-        .installExecutableTextScript destination (
+  | .nixpkgsPackage package => .nixpkgs package.toAttr
+  | .executableTextWrapper args =>
+      .runSteps args.derivationName [.package args.packageName] [
+        .installExecutableTextScript args.destination (
           .concat [
             .literal "#!/bin/sh\n",
-            .package packageName,
-            .literal ("/" ++ executablePath ++ argSuffix args ++ "\n")
+            .package args.packageName,
+            .literal ("/" ++ args.executablePath ++ argSuffix args.arguments ++ "\n")
           ]
         )
       ]
-  | .copyInputTree builderName inputName destination =>
-      .runSteps builderName [] [
-        .copySource (.inputPath inputName) destination,
+  | .copyInputTree args =>
+      .runSteps args.derivationName [] [
+        .copySource (.inputPath args.inputName) args.destination,
         .run "touch \"$out\""
       ]
 
