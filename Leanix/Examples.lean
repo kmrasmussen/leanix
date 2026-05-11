@@ -268,17 +268,12 @@ def helloToolPackage : Package .x86_64_linux where
   name := "helloTool"
   build := .nixpkgs "hello"
 
-def helloWrapperPackage : Package .x86_64_linux where
-  name := "helloWrapper"
-  build := .runSteps "hello-wrapper" [.package "helloTool"] [
-    .installExecutableTextScript "$out/bin/hello-wrapper" (
-      .concat [
-        .literal "#!/bin/sh\n",
-        .package "helloTool",
-        .literal "/bin/hello --version\n"
-      ]
-    )
-  ]
+def helloWrapperPlan : BuildPlan :=
+  .executableTextWrapper "hello-wrapper" "helloTool" "bin/hello" ["--version"]
+    "$out/bin/hello-wrapper"
+
+def helloWrapperPackage : Package .x86_64_linux :=
+  Package.fromBuildPlan "helloWrapper" helloWrapperPlan
 
 def closureCheck : Check .x86_64_linux where
   name := "helloWrapper"
@@ -348,6 +343,30 @@ def typedTextMissingRefFlake : Flake where
   description := "Leanix typed build text missing package reference example"
   inputs := [("nixpkgs", nixpkgsInput)]
   outputs := typedTextMissingRefOutputs
+
+def brokenBuildPlan : BuildPlan :=
+  .executableTextWrapper "planned-broken" "missingPlanDep" "bin/missing" []
+    "$out/bin/planned-broken"
+
+def brokenBuildPlanFlake : Except String ValidatedFlake := do
+  match validateBuildPlanRefs .x86_64_linux [] ["plannedBroken"] "build plan plannedBroken"
+      brokenBuildPlan with
+  | .ok _ =>
+      let package : Package .x86_64_linux := Package.fromBuildPlan "plannedBroken" brokenBuildPlan
+      let project : LibraryProject .x86_64_linux := {
+        package := package
+        devShell := {
+          name := "default"
+          packageNames := ["plannedBroken"]
+        }
+        check := {
+          name := "default"
+          packageName := "plannedBroken"
+          command := "touch \"$out\""
+        }
+      }
+      Flake.fromSchema "Leanix invalid build plan example" [("nixpkgs", nixpkgsInput)] project
+  | .error error => throw error.toString
 
 def cyclePackageA : Package .x86_64_linux where
   name := "cycleA"

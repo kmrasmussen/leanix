@@ -764,6 +764,12 @@ fn main() -> Result<(), String> {
                 "error: package typedTextBroken for x86_64-linux refers to missing package missingTextDep",
         },
         InvalidCase {
+            name: "build plan missing package reference",
+            render_arg: "render-invalid-build-plan-ref",
+            expected_stderr:
+                "error: build plan plannedBroken for x86_64-linux refers to missing package missingPlanDep",
+        },
+        InvalidCase {
             name: "duplicate package env",
             render_arg: "render-invalid-duplicate-package-env",
             expected_stderr:

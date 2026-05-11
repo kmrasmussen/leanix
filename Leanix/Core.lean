@@ -74,6 +74,64 @@ inductive BuildStep where
   deriving Repr, BEq
 end
 
+inductive BuildPlan where
+  | nixpkgsPackage : (attr : String) -> BuildPlan
+  | executableTextWrapper :
+      (builderName : String) ->
+      (packageName : String) ->
+      (executablePath : String) ->
+      (args : List String) ->
+      (destination : String) ->
+      BuildPlan
+  | copyInputTree :
+      (builderName : String) ->
+      (inputName : String) ->
+      (destination : String) ->
+      BuildPlan
+  deriving Repr, BEq
+
+namespace BuildPlan
+
+def joinArgs : List String -> String
+  | [] => ""
+  | arg :: [] => arg
+  | arg :: rest => arg ++ " " ++ joinArgs rest
+
+def argSuffix (args : List String) : String :=
+  match args with
+  | [] => ""
+  | _ => " " ++ joinArgs args
+
+def inputRefs : BuildPlan -> List String
+  | .nixpkgsPackage _ => []
+  | .executableTextWrapper _ _ _ _ _ => []
+  | .copyInputTree _ inputName _ => [inputName]
+
+def packageRefs : BuildPlan -> List String
+  | .nixpkgsPackage _ => []
+  | .executableTextWrapper _ packageName _ _ _ => [packageName]
+  | .copyInputTree _ _ _ => []
+
+def toBuildExpr : BuildPlan -> BuildExpr
+  | .nixpkgsPackage attr => .nixpkgs attr
+  | .executableTextWrapper builderName packageName executablePath args destination =>
+      .runSteps builderName [.package packageName] [
+        .installExecutableTextScript destination (
+          .concat [
+            .literal "#!/bin/sh\n",
+            .package packageName,
+            .literal ("/" ++ executablePath ++ argSuffix args ++ "\n")
+          ]
+        )
+      ]
+  | .copyInputTree builderName inputName destination =>
+      .runSteps builderName [] [
+        .copySource (.inputPath inputName) destination,
+        .run "touch \"$out\""
+      ]
+
+end BuildPlan
+
 structure EnvVar where
   name : String
   value : String
@@ -86,6 +144,10 @@ structure Package (system : System) where
   inputs : List Input := []
   env : List EnvVar := []
   deriving Repr, BEq
+
+def Package.fromBuildPlan (name : String) (plan : BuildPlan) : Package system where
+  name := name
+  build := plan.toBuildExpr
 
 structure App (system : System) where
   name : String

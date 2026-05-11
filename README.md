@@ -15,6 +15,11 @@ Leanix now validates first-order package closure: package build expressions can
 refer to other packages, and Lean rejects missing package references and package
 dependency cycles before rendering Nix.
 
+Leanix also has a first build-plan layer. `BuildPlan` describes common package
+intentions before choosing the concrete Nix-shaped `BuildExpr`; it exposes
+package and input references for validation, then lowers to the current
+renderer backend.
+
 Leanix also has its first typed output schema. `CliProject` lowers a typed
 package/app/dev shell/check contract to ordinary flake outputs after validating
 that the conventional defaults point at the project package.

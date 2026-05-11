@@ -23,3 +23,7 @@ generated/flake.nix` demonstrates `MultiAppProject`, where several app outputs
 share one package graph. Use these schemas for known conventions; keep using
 raw `Flake` values when experimenting with output shapes Leanix has not named
 yet.
+
+The closure and showcase examples now author `helloWrapper` through
+`helloWrapperPlan`, a `BuildPlan` that lowers to the same generated Nix as the
+previous direct `BuildExpr` version.

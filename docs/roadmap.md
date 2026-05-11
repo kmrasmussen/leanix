@@ -39,8 +39,11 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 - ✅ Local sources are split into `Input.localDevSource` and
   `Input.impureLocalSource`; they are rendered as non-flake inputs with an
   explicit trust-boundary comment.
-- ⬜ Track builder identity and declared dependencies beyond the package graph.
-- ⬜ Model build plans separately from realized store paths.
+- 🟡 Track builder identity and declared dependencies beyond the package graph:
+  `BuildPlan` now names a first set of package intentions and exposes
+  package/input references before lowering.
+- 🟡 Model build plans separately from realized store paths: plans lower to the
+  existing Nix-shaped `BuildExpr` backend in the first slice.
 - ✅ Validation returns structured `ValidateError` and `SchemaError` values.
 
 ## Phase 3: Nix Interop — 🟡

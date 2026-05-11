@@ -24,8 +24,8 @@ The smallest example, `helloFlake` (`Leanix/Examples.lean`), defines:
 Two more elaborate examples build on the same model:
 
 - `closureFlake` adds a typed package closure: `helloWrapper` references
-  `helloTool` through `BuildExpr.package` and is rendered with the structured
-  `runSteps` builder.
+  `helloTool` through `helloWrapperPlan`, a `BuildPlan` value that lowers to
+  the structured `runSteps` backend.
 - `showcaseCliProject` packages the closure example as a `CliProject` schema,
   takes it through `CliProject.validateChecked` to get a proof-carrying
   `ValidatedSchema`, and then lowers to a `ValidatedFlake`. This is the current
@@ -55,6 +55,8 @@ structured build step, and runs a structured Lean-project build inside
 - every `BuildExpr.inputPath` references a declared flake input
 - every `BuildExpr.package`, app `packageName`, dev-shell entry, and check
   `packageName` references an existing package for that system
+- every validated `BuildPlan` package/input reference can be inspected before
+  the plan is lowered to a backend `BuildExpr`
 - package references are acyclic (fuel-bounded reachability)
 - for `CliProject`: app/dev-shell/check are named `default`; app and check
   point at the project package; the dev shell contains the project package.
@@ -145,6 +147,15 @@ witness for evaluating and building the rendered flake; Leanix does not claim
 to prove Nix evaluation.
 
 ## Builder Boundary
+
+`BuildPlan` is the first backend-neutral package authoring layer. It names the
+build intention Leanix wants to own, such as using a nixpkgs package, producing
+an executable wrapper for another package, or copying an input tree. Plans expose
+`inputRefs` and `packageRefs` for validation before they lower to `BuildExpr`.
+
+`BuildExpr` remains the current Nix backend representation. Rendering still
+works from `BuildExpr`, and `Package.fromBuildPlan` is the migration bridge from
+typed plans to today's renderer.
 
 `BuildExpr.runSteps` is the current structured builder surface. It owns common
 operations that Leanix wants to reason about semantically:

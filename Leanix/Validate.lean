@@ -36,15 +36,33 @@ def validatePackageRef (system : System) (packageNames : List String) (owner : S
   else
     throw (.missingPackageRef system owner packageName)
 
+def validateInputRef (inputNames : List String) (name : String) : Except ValidateError Unit := do
+  if inputNames.contains name then
+    pure ()
+  else
+    throw (.missingInputRef name)
+
+def validateBuildPlanInputRefs (inputNames : List String) (plan : BuildPlan) :
+    Except ValidateError Unit := do
+  for inputName in plan.inputRefs do
+    validateInputRef inputNames inputName
+
+def validateBuildPlanPackageRefs (system : System) (packageNames : List String) (owner : String)
+    (plan : BuildPlan) : Except ValidateError Unit := do
+  for packageName in plan.packageRefs do
+    validatePackageRef system packageNames owner packageName
+
+def validateBuildPlanRefs (system : System) (inputNames packageNames : List String)
+    (owner : String) (plan : BuildPlan) : Except ValidateError Unit := do
+  validateBuildPlanInputRefs inputNames plan
+  validateBuildPlanPackageRefs system packageNames owner plan
+
 mutual
 def validateBuildTextInputRefs (inputNames : List String) : BuildText -> Except ValidateError Unit
   | .literal _ => pure ()
   | .package _ => pure ()
   | .inputPath name =>
-      if inputNames.contains name then
-        pure ()
-      else
-        throw (.missingInputRef name)
+      validateInputRef inputNames name
   | .outPath => pure ()
   | .concat parts => validateBuildTextInputRefsList inputNames parts
 

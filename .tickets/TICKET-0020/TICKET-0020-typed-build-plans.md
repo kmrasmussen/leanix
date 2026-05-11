@@ -34,3 +34,27 @@ the Nix rendering strategy.
 3. The generated flake for the migrated example remains equivalent under the
    existing golden/e2e checks.
 4. The docs clearly name the new boundary.
+
+## Plan
+- Add a first `BuildPlan` type for backend-neutral package intent while keeping
+  `BuildExpr` as the current Nix realization layer.
+- Lower `BuildPlan` values to `BuildExpr` so the renderer can stay unchanged in
+  this slice.
+- Expose package/input reference extraction on build plans and validate one
+  invalid plan before rendering.
+- Migrate one golden-covered example to build-plan authoring while preserving
+  its generated flake.
+- Update docs and add a dated blog note.
+
+## Progress
+- Added `BuildPlan` with reference extraction and lowering to the current
+  `BuildExpr` backend.
+- Migrated `helloWrapperPackage` to `helloWrapperPlan` via
+  `Package.fromBuildPlan`, preserving the existing closure/showcase generated
+  flake fixtures.
+- Added an invalid build-plan e2e case that fails on a missing package reference
+  before rendering.
+- Updated docs and added a dated blog note for the build-plan boundary.
+- Verification:
+  - `nix develop --command lake build`
+  - `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`
