@@ -2,7 +2,14 @@
   description = "Leanix proof-carrying CLI closure showcase";
 
   inputs = {
-    "nixpkgs".url = "github:NixOS/nixpkgs/nixos-unstable";
+    "nixpkgs" = {
+      type = "github";
+      owner = "NixOS";
+      repo = "nixpkgs";
+      ref = "nixos-unstable";
+      rev = "549bd84d6279f9852cae6225e372cc67fb91a4c1";
+      narHash = "sha256-hGdgeU2Nk87RAuZyYjyDjFL6LK7dAZN5RE9+hrDTkDU=";
+    };
   };
 
   outputs = { self, nixpkgs }:

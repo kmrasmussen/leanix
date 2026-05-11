@@ -101,6 +101,12 @@ Lockfile-backed `Input.flake` and local source inputs render as flake inputs.
 Fixed-output `Input.source` values render as `builtins.fetchTree` bindings and
 are excluded from the flake output argument set.
 
+Input policy is split by context. Development flakes may use floating flake
+refs, and Nix can create or update `flake.lock` during normal local checks.
+Proof-carrying artifacts are stricter: a flake input must either carry a pinned
+revision plus hash in the manifest or, in a future slice, record a concrete
+lockfile witness. Floating artifact inputs are rejected by `verify-artifact`.
+
 The internal build-expression renderer still uses a finite depth guard, but
 exhaustion is now a Lean-side `Except` error. It no longer emits a latent
 `throw "Leanix render depth exceeded"` expression into generated Nix.
@@ -130,8 +136,8 @@ artifact. The directory contains:
 - `leanix.manifest.json`, a machine-readable manifest
 
 The manifest records the renderer version, source reference, generated files,
-systems, inputs and source trust classes, packages, app/check package
-references, checked invariant names, and replay commands.
+systems, inputs, source trust classes, pin policies, pin metadata, packages,
+app/check package references, checked invariant names, and replay commands.
 
 The current artifact is proof-carrying in a deliberately narrow sense. Lean
 checks schema invariants, package closure, finite acyclicity, source trust

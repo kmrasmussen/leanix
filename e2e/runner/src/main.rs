@@ -192,6 +192,54 @@ fn run_artifact_case(repo: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn run_artifact_policy_rejection_case(repo: &Path) -> Result<(), String> {
+    let artifact_dir = "generated/floating-policy-artifact";
+    eprintln!("case: artifact floating input policy rejection");
+    run(
+        repo,
+        "lake",
+        &["exe", "leanix", "emit-artifact", "--out", artifact_dir],
+    )?;
+
+    let manifest_path = repo.join(artifact_dir).join("leanix.manifest.json");
+    let manifest = fs::read_to_string(&manifest_path)
+        .map_err(|err| format!("failed reading {}: {err}", manifest_path.display()))?;
+    let manifest = manifest
+        .replace(
+            "\"trustClass\": \"pinned-flake-input\"",
+            "\"trustClass\": \"floating-flake-input\"",
+        )
+        .replace(
+            "\"pinPolicy\": \"pinned-ref\"",
+            "\"pinPolicy\": \"development-floating-ref\"",
+        );
+    fs::write(&manifest_path, manifest)
+        .map_err(|err| format!("failed writing {}: {err}", manifest_path.display()))?;
+
+    let output = Command::new("lake")
+        .args(["exe", "leanix", "verify-artifact", artifact_dir])
+        .current_dir(repo)
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|err| format!("failed to start lake: {err}"))?;
+
+    if output.status.success() {
+        return Err("floating artifact policy unexpectedly verified".to_string());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let actual = stderr.trim();
+    let expected =
+        "error: artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness";
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(format!(
+            "floating artifact policy stderr mismatch\nexpected: {expected}\nactual: {actual}"
+        ))
+    }
+}
+
 fn run_source_injection_case(repo: &Path) -> Result<(), String> {
     let output = "generated/source-injection-flake.nix";
     eprintln!("case: source argument escaping");
@@ -826,6 +874,7 @@ fn main() -> Result<(), String> {
     }
 
     run_artifact_case(&repo)?;
+    run_artifact_policy_rejection_case(&repo)?;
     run_source_injection_case(&repo)?;
     run_hashed_source_case(&repo)?;
 

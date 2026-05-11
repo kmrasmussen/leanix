@@ -39,6 +39,9 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 - ✅ Local sources are split into `Input.localDevSource` and
   `Input.impureLocalSource`; they are rendered as non-flake inputs with an
   explicit trust-boundary comment.
+- ✅ Artifact manifests record flake input pin policy and pinned rev/hash
+  metadata, and artifact verification rejects floating flake inputs without a
+  lockfile witness.
 - 🟡 Track builder identity and declared dependencies beyond the package graph:
   `BuildPlan` now names typed builder identities for known nixpkgs packages,
   executable text wrappers, and input-tree copies, and exposes package/input

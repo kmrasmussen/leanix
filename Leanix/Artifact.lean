@@ -6,7 +6,11 @@ namespace Leanix
 structure ArtifactInput where
   name : String
   trustClass : String
+  pinPolicy : String
   url : String
+  lockfile? : Option String := none
+  rev? : Option String := none
+  narHash? : Option String := none
   deriving Repr, BEq
 
 structure ArtifactPackage where
@@ -76,11 +80,28 @@ def jsonObjectArray (objects : List (List String)) : List String :=
   | [] => ["[]"]
   | _ => ["["] ++ jsonObjectArrayItems objects ++ ["]"]
 
-def ArtifactInput.toJsonLines (input : ArtifactInput) : List String := [
-  "\"name\": " ++ jsonString input.name ++ ",",
-  "\"trustClass\": " ++ jsonString input.trustClass ++ ",",
-  "\"url\": " ++ jsonString input.url
-]
+def jsonField (name : String) (value : String) : String :=
+  jsonString name ++ ": " ++ value
+
+def jsonObjectFieldLines : List String -> List String
+  | [] => []
+  | value :: [] => [value]
+  | value :: rest => (value ++ ",") :: jsonObjectFieldLines rest
+
+def optionalJsonField (name : String) : Option String -> List String
+  | none => []
+  | some value => [jsonField name (jsonString value)]
+
+def ArtifactInput.toJsonLines (input : ArtifactInput) : List String :=
+  jsonObjectFieldLines <| [
+    jsonField "name" (jsonString input.name),
+    jsonField "trustClass" (jsonString input.trustClass),
+    jsonField "pinPolicy" (jsonString input.pinPolicy),
+    jsonField "url" (jsonString input.url)
+  ] ++
+  optionalJsonField "lockfile" input.lockfile? ++
+  optionalJsonField "rev" input.rev? ++
+  optionalJsonField "narHash" input.narHash?
 
 def ArtifactPackage.toJsonLines (package : ArtifactPackage) : List String := [
   "\"name\": " ++ jsonString package.name ++ ",",
@@ -91,9 +112,6 @@ def ArtifactReference.toJsonLines (reference : ArtifactReference) : List String 
   "\"name\": " ++ jsonString reference.name ++ ",",
   "\"packageName\": " ++ jsonString reference.packageName
 ]
-
-def jsonField (name : String) (value : String) : String :=
-  jsonString name ++ ": " ++ value
 
 def jsonArrayField (name : String) (lines : List String) (comma : Bool) : List String :=
   match lines with
@@ -133,10 +151,22 @@ def buildExprKind : BuildExpr -> String
   | .runSteps _ _ _ => "runSteps"
 
 def inputTrustClass : Input -> String
-  | .flake _ => "lockfile-backed-flake-input"
+  | .flake pin =>
+      match pin.rev?, pin.narHash? with
+      | some _, some _ => "pinned-flake-input"
+      | _, _ => "floating-flake-input"
   | .source _ => "fixed-output-source"
   | .localDevSource _ => "local-development-source"
   | .impureLocalSource _ => "impure-local-source"
+
+def inputPinPolicy : Input -> String
+  | .flake pin =>
+      match pin.rev?, pin.narHash? with
+      | some _, some _ => "pinned-ref"
+      | _, _ => "development-floating-ref"
+  | .source _ => "fixed-output-hash"
+  | .localDevSource _ => "local-development"
+  | .impureLocalSource _ => "impure-local"
 
 def inputUrl : Input -> String
   | .flake pin => pin.url
@@ -147,7 +177,18 @@ def inputUrl : Input -> String
 def inputArtifact (input : String × Input) : ArtifactInput := {
   name := input.fst
   trustClass := inputTrustClass input.snd
+  pinPolicy := inputPinPolicy input.snd
   url := inputUrl input.snd
+  rev? :=
+    match input.snd with
+    | .flake pin => pin.rev?
+    | .source pin => pin.rev?
+    | _ => none
+  narHash? :=
+    match input.snd with
+    | .flake pin => pin.narHash?.map renderContentHash
+    | .source pin => pin.narHash?.map renderContentHash
+    | _ => none
 }
 
 def packageArtifact (package : Package system) : ArtifactPackage := {
@@ -171,7 +212,7 @@ def showcaseArtifactManifest : ArtifactManifest := {
   sourceRef := "examples/proof-carrying-cli-closure/source.lean"
   generatedFiles := ["flake.nix", "leanix.manifest.json"]
   systems := [.x86_64_linux]
-  inputs := [("nixpkgs", Examples.nixpkgsInput)].map inputArtifact
+  inputs := [("nixpkgs", Examples.pinnedNixpkgsInput)].map inputArtifact
   packages := (Examples.showcaseCliProject.package :: Examples.showcaseCliProject.extraPackages).map packageArtifact
   apps := [Examples.showcaseCliProject.app].map appArtifact
   checks := [Examples.showcaseCliProject.check].map checkArtifact
@@ -194,10 +235,15 @@ def showcaseArtifactManifest : ArtifactManifest := {
 }
 
 def renderShowcaseArtifact : Except String (String × String) := do
+  let validatedSchema ←
+    match Examples.showcaseValidatedSchema with
+    | .ok validated => pure validated
+    | .error error => throw error.toString
   let validatedFlake ←
-    match Examples.showcaseFlake with
+    match Flake.fromValidatedSchema "Leanix proof-carrying CLI closure showcase"
+        [("nixpkgs", Examples.pinnedNixpkgsInput)] validatedSchema with
     | .ok validatedFlake => pure validatedFlake
-    | .error error => throw error
+    | .error error => throw error.toString
   let renderedFlake ← renderFlake validatedFlake
   pure (renderedFlake, showcaseArtifactManifest.toJson)
 

@@ -22,6 +22,11 @@ renderer backend. The first builder identities are typed constructors for known
 nixpkgs packages, executable text wrappers, and input-tree copies, with named
 argument records for the structured plans.
 
+Artifact input policy is stricter than development rendering. Development flakes
+can remain ergonomic with floating refs, while proof-carrying artifacts record
+pinned revision/hash metadata and reject floating flake inputs unless a future
+lockfile witness is present.
+
 Leanix also has its first typed output schema. `CliProject` lowers a typed
 package/app/dev shell/check contract to ordinary flake outputs after validating
 that the conventional defaults point at the project package.

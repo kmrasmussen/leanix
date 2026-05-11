@@ -59,33 +59,40 @@ def verifyShowcaseArtifact (artifactDir : String) : IO (Except String Unit) := d
   | .error error, _ => pure (.error error)
   | _, .error error => pure (.error error)
   | .ok manifest, .ok flake => do
-      let checks : List (Except String Unit) := [
-        requireSubstring "manifest" manifest "\"generatedFiles\"",
-        requireSubstring "manifest generated files" manifest "\"flake.nix\"",
-        requireSubstring "manifest generated files" manifest "\"leanix.manifest.json\"",
-        requireSubstring "manifest systems" manifest "\"x86_64-linux\"",
-        requireSubstring "manifest packages" manifest "\"helloWrapper\"",
-        requireSubstring "manifest packages" manifest "\"helloTool\"",
-        requireSubstring "manifest apps/checks" manifest "\"packageName\": \"helloWrapper\"",
-        requireSubstring "manifest checked invariants" manifest "\"PackageClosure.refsResolve\"",
-        requireSubstring "manifest checked invariants" manifest "\"PackageClosure.acyclicByFuel\"",
-        requireSubstring "manifest checked invariants" manifest "\"CliProject.appPointsAtPackage\"",
-        requireSubstring "manifest checked invariants" manifest "\"sourceTrust.fetchLikeSourcesRequireHash\"",
-        requireSubstring "artifact flake packages" flake "\"helloWrapper\" =",
-        requireSubstring "artifact flake packages" flake "\"helloTool\" =",
-        requireSubstring "artifact flake default package" flake
-          "\"default\" = self.packages.${system}.\"helloWrapper\";",
-        requireSubstring "artifact flake check" flake "\"default\" = pkgs.runCommand"
-      ]
-      match firstError checks with
-      | some error => pure (.error error)
-      | none => do
-          match ← runReplayCommand none "lake" #["env", "lean", "examples/proof-carrying-cli-closure/source.lean"] with
-          | .error error => pure (.error error)
-          | .ok _ =>
-              match ← runReplayCommand (some dir) "nix" #["flake", "check", "path:."] with
-              | .error error => pure (.error error)
-              | .ok _ => pure (.ok ())
+      if stringContains manifest "\"trustClass\": \"floating-flake-input\"" then
+        pure (.error "artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness")
+      else do
+        let checks : List (Except String Unit) := [
+          requireSubstring "manifest" manifest "\"generatedFiles\"",
+          requireSubstring "manifest generated files" manifest "\"flake.nix\"",
+          requireSubstring "manifest generated files" manifest "\"leanix.manifest.json\"",
+          requireSubstring "manifest systems" manifest "\"x86_64-linux\"",
+          requireSubstring "manifest input trust class" manifest "\"trustClass\": \"pinned-flake-input\"",
+          requireSubstring "manifest input pin policy" manifest "\"pinPolicy\": \"pinned-ref\"",
+          requireSubstring "manifest input rev" manifest "\"rev\"",
+          requireSubstring "manifest input narHash" manifest "\"narHash\"",
+          requireSubstring "manifest packages" manifest "\"helloWrapper\"",
+          requireSubstring "manifest packages" manifest "\"helloTool\"",
+          requireSubstring "manifest apps/checks" manifest "\"packageName\": \"helloWrapper\"",
+          requireSubstring "manifest checked invariants" manifest "\"PackageClosure.refsResolve\"",
+          requireSubstring "manifest checked invariants" manifest "\"PackageClosure.acyclicByFuel\"",
+          requireSubstring "manifest checked invariants" manifest "\"CliProject.appPointsAtPackage\"",
+          requireSubstring "manifest checked invariants" manifest "\"sourceTrust.fetchLikeSourcesRequireHash\"",
+          requireSubstring "artifact flake packages" flake "\"helloWrapper\" =",
+          requireSubstring "artifact flake packages" flake "\"helloTool\" =",
+          requireSubstring "artifact flake default package" flake
+            "\"default\" = self.packages.${system}.\"helloWrapper\";",
+          requireSubstring "artifact flake check" flake "\"default\" = pkgs.runCommand"
+        ]
+        match firstError checks with
+        | some error => pure (.error error)
+        | none => do
+            match ← runReplayCommand none "lake" #["env", "lean", "examples/proof-carrying-cli-closure/source.lean"] with
+            | .error error => pure (.error error)
+            | .ok _ =>
+                match ← runReplayCommand (some dir) "nix" #["flake", "check", "path:."] with
+                | .error error => pure (.error error)
+                | .ok _ => pure (.ok ())
 
 def renderValidatedToFile (validated : Leanix.ValidatedFlake) (outputPath : String) : IO UInt32 := do
   match Leanix.renderFlake validated with
