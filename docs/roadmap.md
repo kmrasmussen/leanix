@@ -78,10 +78,11 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   embedded as a generated Nix `throw`.
 - ✅ Optional nixparserlean interop reads `--desugar --format json` for selected
   generated flakes, checks parsed-output contracts, and runs top-level `--eval`.
+- ✅ Artifact-flake interop parses and evals the emitted proof-carrying
+  showcase artifact flake through nixparserlean.
 - 🟡 Round-trip shape checks cover selected inputs, output families, active
   systems, formatter outputs, and default aliases; a dedicated nixparserlean
   summary mode is still future work.
-- ⬜ Artifact-flake interop case.
 
 ## Phase 4: Proofs — 🟡
 

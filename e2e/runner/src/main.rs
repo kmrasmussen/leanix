@@ -1001,6 +1001,81 @@ fn run_interop_case(
     Ok(())
 }
 
+fn run_artifact_interop_case(
+    repo: &Path,
+    nixparserlean_dir: &Path,
+    out_dir: &Path,
+) -> Result<(), String> {
+    let artifact_dir = out_dir.join("showcase-artifact");
+    let artifact_arg = artifact_dir.to_string_lossy().into_owned();
+    let flake_path = artifact_dir.join("flake.nix");
+    let flake_arg = flake_path.to_string_lossy().into_owned();
+
+    eprintln!("interop render artifact: showcase-artifact");
+    run(
+        repo,
+        "lake",
+        &["exe", "leanix", "emit-artifact", "--out", &artifact_arg],
+    )?;
+
+    eprintln!("interop desugar artifact: showcase-artifact");
+    let parsed_json = run_capture(
+        nixparserlean_dir,
+        "nix",
+        &[
+            "develop",
+            "--command",
+            "lake",
+            "exe",
+            "nixparserlean",
+            "--desugar",
+            "--format",
+            "json",
+            "--file",
+            &flake_arg,
+        ],
+    )?;
+
+    eprintln!("interop parsed contract artifact: showcase-artifact");
+    check_parsed_output_contract(
+        "showcase-artifact",
+        &parsed_json,
+        ParsedOutputContract {
+            inputs: &["nixpkgs"],
+            systems: &["x86_64-linux"],
+            packages: &["helloWrapper", "helloTool"],
+            apps: &["default"],
+            dev_shells: &["default"],
+            checks: &["default"],
+            formatters: &[],
+            default_package_targets: &["helloWrapper"],
+            default_app_targets: &[],
+            formatter_package_targets: &[],
+        },
+    )?;
+    for input_field in ["type", "owner", "repo", "rev", "narHash"] {
+        require_static_assign(&parsed_json, "showcase-artifact", input_field)?;
+    }
+
+    eprintln!("interop eval artifact: showcase-artifact");
+    run_quiet(
+        nixparserlean_dir,
+        "nix",
+        &[
+            "develop",
+            "--command",
+            "lake",
+            "exe",
+            "nixparserlean",
+            "--eval",
+            "--file",
+            &flake_arg,
+        ],
+    )?;
+
+    Ok(())
+}
+
 fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<(), String> {
     eprintln!("case: nixparserlean interop");
     if !nixparserlean_dir.join("lakefile.lean").is_file()
@@ -1119,6 +1194,7 @@ fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<()
     for case in cases {
         run_interop_case(repo, nixparserlean_dir, &out_dir, &case)?;
     }
+    run_artifact_interop_case(repo, nixparserlean_dir, &out_dir)?;
 
     Ok(())
 }

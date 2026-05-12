@@ -78,7 +78,14 @@ The interop suite renders selected Leanix examples into
 `generated/interop-nixparserlean/`, then runs nixparserlean against each
 generated flake with both `--desugar --format json` and `--eval`. Parsed-output
 contracts currently cover the hello, CLI schema, formatter schema, showcase,
-and multi-system examples.
+multi-system, and proof-carrying showcase artifact flakes.
+
+The artifact case emits `generated/interop-nixparserlean/showcase-artifact/`
+with `leanix emit-artifact`, then parses and evals the artifact's `flake.nix`.
+Its parsed contract checks the normal package/app/dev-shell/check output shape,
+the default package alias, and the visible pinned `nixpkgs` input fields
+(`type`, `owner`, `repo`, `rev`, and `narHash`). It still does not apply the
+flake `outputs` function to fetched inputs.
 
 The parsed contract is intentionally small. It checks that expected static
 assignments and select paths appear in the desugared JSON; it is not a complete

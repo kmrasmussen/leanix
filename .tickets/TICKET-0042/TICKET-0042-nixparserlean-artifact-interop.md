@@ -49,4 +49,24 @@ artifact output shape.
 - `blog/yyyy-mm-dd-hh-mm-nixparserlean-artifact-interop.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Emit the proof-carrying showcase artifact inside the optional interop output
+   directory.
+2. Parse and top-level eval the artifact `flake.nix` through nixparserlean.
+3. Assert the artifact output contract and visible pinned input fields.
+4. Document the artifact interop boundary and non-goals.
+
+## Result
+- Added an artifact interop case under `generated/interop-nixparserlean/`.
+- The Rust harness now runs nixparserlean `--desugar --format json` and
+  `--eval` on the emitted artifact flake.
+- The parsed contract checks `nixpkgs`, output families, default package alias,
+  and pinned input fields `type`, `owner`, `repo`, `rev`, and `narHash`.
+- Updated interop, PoC, roadmap, and current-state docs.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --nixparserlean-dir ../nixparserlean`.

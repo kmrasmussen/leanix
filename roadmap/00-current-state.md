@@ -161,14 +161,13 @@ generated flakes stay inside a subset that `nixparserlean` can parse, desugar,
 and evaluate at the top-level flake record.
 
 Current parsed contracts cover selected input declarations, output families,
-active systems, packages, apps, dev shells, checks, formatters, and selected
-default aliases.
+active systems, packages, apps, dev shells, checks, formatters, selected default
+aliases, and the emitted proof-carrying showcase artifact flake.
 
 Next pressure:
 
 - replace desugared JSON path/string checks with a dedicated parsed summary
   mode in `nixparserlean`
-- add an artifact-flake interop case
 - keep this as Rust-owned interop rather than a direct Lean dependency until the
   shared contract is more stable
 
