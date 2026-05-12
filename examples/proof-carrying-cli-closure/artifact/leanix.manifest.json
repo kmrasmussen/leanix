@@ -8,7 +8,7 @@
     "leanix.manifest.json"
   ],
   "fileHashes": [
-    "flake.nix leanix-fnv1a32-933545469"
+    "flake.nix leanix-fnv1a32-3687559998"
   ],
   "systems": [
     "x86_64-linux"

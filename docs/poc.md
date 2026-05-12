@@ -121,6 +121,10 @@ Lockfile-backed `Input.flake` and local source inputs render as flake inputs.
 Fixed-output `Input.source` values render as `builtins.fetchTree` bindings and
 are excluded from the flake output argument set.
 
+Pinned GitHub flake inputs render as explicit input attrsets. When a pin carries
+`rev`, Leanix omits the branch/tag `ref` parsed from the URL because current Nix
+rejects inputs that contain both a commit hash and a branch or tag name.
+
 Input policy is split by context. Development flakes may use floating flake
 refs, and Nix can create or update `flake.lock` during normal local checks.
 Proof-carrying artifacts are stricter: a flake input must either carry a pinned

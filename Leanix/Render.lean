@@ -144,9 +144,9 @@ def renderGithubInput (name : String) (github : GithubPin) (pin : SourcePin) : S
     "      owner = " ++ renderString github.owner ++ ";",
     "      repo = " ++ renderString github.repo ++ ";"
   ] ++
-  (match github.ref? with
-    | none => []
-    | some ref => ["      ref = " ++ renderString ref ++ ";"]) ++
+  (match pin.rev?, github.ref? with
+    | none, some ref => ["      ref = " ++ renderString ref ++ ";"]
+    | _, _ => []) ++
   (match pin.rev? with
     | none => []
     | some rev => ["      rev = " ++ renderString rev ++ ";"]) ++

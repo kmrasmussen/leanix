@@ -19,6 +19,10 @@ The active next roadmap wave is materialized as `TICKET-0034` through
 `TICKET-0044`. `TICKET-0034` through `TICKET-0037` are complete; `TICKET-0038`
 through `TICKET-0044` remain ready to pick up as implementation slices.
 
+`TICKET-0045` and `TICKET-0046` track the 2026-05-12 CI regression follow-up:
+the pinned GitHub input rendering failure and a local CI parity workflow before
+push.
+
 Use `roadmap/00-current-state.md`, `roadmap/02-milestones.md`,
 `roadmap/03-workstreams.md`, and `roadmap/05-verification-strategy.md` as the
 broader context for those tickets.
