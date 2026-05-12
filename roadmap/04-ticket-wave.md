@@ -127,6 +127,8 @@ Acceptance:
 
 ## TICKET-0050: Generated Nix Backend Contract
 
+Status: completed.
+
 Problem:
 
 Nix is the active backend, but the supported generated-Nix subset is spread

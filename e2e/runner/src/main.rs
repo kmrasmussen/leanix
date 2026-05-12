@@ -959,7 +959,7 @@ fn require_json_fragment(json: &str, context: &str, fragment: &str) -> Result<()
         Ok(())
     } else {
         Err(format!(
-            "parsed Nix summary for {context} missing {fragment}"
+            "nixparserlean contract mismatch for {context}: parsed output missing {fragment}"
         ))
     }
 }
@@ -978,7 +978,7 @@ fn require_select_path(json: &str, context: &str, path: &[&str]) -> Result<(), S
         let fragment = format!("\"kind\":\"static\",\"name\":\"{}\"", name);
         let offset = json[start..].find(&fragment).ok_or_else(|| {
             format!(
-                "parsed Nix summary for {context} missing select path {:?}",
+                "nixparserlean contract mismatch for {context}: parsed output missing select path {:?}",
                 path
             )
         })?;
@@ -1060,7 +1060,7 @@ fn check_parsed_contract_rejects_missing_fact(case_name: &str, json: &str) -> Re
 
     match check_parsed_output_contract(case_name, json, impossible) {
         Ok(()) => Err(format!(
-            "parsed Nix summary contract for {case_name} accepted a missing package"
+            "nixparserlean contract mismatch for {case_name}: parsed output contract accepted a missing package"
         )),
         Err(_) => Ok(()),
     }
@@ -1115,7 +1115,13 @@ fn run_interop_case(
             "--file",
             &output_arg,
         ],
-    )?;
+    )
+    .map_err(|err| {
+        format!(
+            "nixparserlean desugar failed for {}; sibling checkout may be stale/broken or generated Nix may be outside the backend contract\n{}",
+            case.name, err
+        )
+    })?;
 
     if let Some(contract) = case.parsed_contract {
         eprintln!("interop parsed contract: {}", case.name);
@@ -1139,7 +1145,13 @@ fn run_interop_case(
             "--file",
             &output_arg,
         ],
-    )?;
+    )
+    .map_err(|err| {
+        format!(
+            "nixparserlean eval failed for {}; sibling checkout may be stale/broken or generated Nix may be outside the backend contract\n{}",
+            case.name, err
+        )
+    })?;
 
     Ok(())
 }
@@ -1177,7 +1189,13 @@ fn run_artifact_interop_case(
             "--file",
             &flake_arg,
         ],
-    )?;
+    )
+    .map_err(|err| {
+        format!(
+            "nixparserlean desugar failed for showcase-artifact; sibling checkout may be stale/broken or generated Nix may be outside the backend contract\n{}",
+            err
+        )
+    })?;
 
     eprintln!("interop parsed contract artifact: showcase-artifact");
     check_parsed_output_contract(
@@ -1214,7 +1232,13 @@ fn run_artifact_interop_case(
             "--file",
             &flake_arg,
         ],
-    )?;
+    )
+    .map_err(|err| {
+        format!(
+            "nixparserlean eval failed for showcase-artifact; sibling checkout may be stale/broken or generated Nix may be outside the backend contract\n{}",
+            err
+        )
+    })?;
 
     Ok(())
 }
@@ -1225,10 +1249,24 @@ fn run_nixparserlean_interop(repo: &Path, nixparserlean_dir: &Path) -> Result<()
         || !nixparserlean_dir.join("NixParserLean").is_dir()
     {
         return Err(format!(
-            "nixparserlean path '{}' is not a nixparserlean checkout; expected lakefile.lean and NixParserLean/",
+            "missing nixparserlean checkout: path '{}' is not a nixparserlean checkout; expected lakefile.lean and NixParserLean/",
             nixparserlean_dir.display()
         ));
     }
+
+    eprintln!("interop checkout build: {}", nixparserlean_dir.display());
+    run_quiet(
+        nixparserlean_dir,
+        "nix",
+        &["develop", "--command", "lake", "build"],
+    )
+    .map_err(|err| {
+        format!(
+            "nixparserlean checkout at '{}' did not build; sibling checkout may be stale or broken\n{}",
+            nixparserlean_dir.display(),
+            err
+        )
+    })?;
 
     let out_dir = repo.join("generated/interop-nixparserlean");
     fs::create_dir_all(&out_dir)

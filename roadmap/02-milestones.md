@@ -121,6 +121,8 @@ Time-bound acceptance:
 
 Deadline: 2026-06-09.
 
+Status: completed in `TICKET-0050`.
+
 Specific:
 
 - Document the supported generated-Nix subset as a backend contract.

@@ -55,4 +55,27 @@ Create a maintained backend contract for the Nix that Leanix emits.
 - `blog/yyyy-mm-dd-hh-mm-generated-nix-backend-contract.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Add a maintained generated-Nix backend contract document.
+2. Link the contract from PoC and nixparserlean interop docs.
+3. Improve optional interop diagnostics for missing checkout, stale/broken
+   checkout, desugar/eval failure, and parsed-contract mismatch.
+4. Keep generated files under `generated/`.
+5. Verify normal e2e, optional nixparserlean interop, and local CI.
+
+## Result
+- Added `docs/generated-nix-contract.md`.
+- Documented the boundary between Leanix graph claims and Nix backend witness
+  claims.
+- Clarified current interop coverage for registry examples and the artifact
+  flake.
+- Added a nixparserlean checkout build probe and clearer interop error
+  classification in the Rust harness.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --nixparserlean-dir ../nixparserlean`.
+- Passed: `scripts/ci-local`.

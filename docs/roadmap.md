@@ -80,6 +80,11 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   generated flakes, checks parsed-output contracts, and runs top-level `--eval`.
 - ✅ Artifact-flake interop parses and evals the emitted proof-carrying
   showcase artifact flake through nixparserlean.
+- ✅ `docs/generated-nix-contract.md` documents the supported generated-Nix
+  backend subset and current interop coverage.
+- ✅ Optional nixparserlean interop failure output distinguishes missing
+  checkout, stale/broken checkout, desugar/eval failure, and contract mismatch
+  where practical.
 - 🟡 Round-trip shape checks cover selected inputs, output families, active
   systems, formatter outputs, and default aliases; a dedicated nixparserlean
   summary mode is still future work.
@@ -128,8 +133,8 @@ escape policy, and replay metadata.
 
 ## Operational
 
-- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0049`
-  are complete, and `TICKET-0050` through `TICKET-0051` are the remaining
+- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0050`
+  are complete, and `TICKET-0051` is the remaining
   agent-legible roadmap wave.
 - ✅ CI workflow exists in `.github/workflows/ci.yml`.
 - ✅ Source trust modeling is represented by `Input.source`,

@@ -135,6 +135,11 @@ must pass through `Flake.validateChecked` first. It renders inputs, package
 builders, apps, dev shells, checks, and `formatter.${system}` outputs, plus a
 synthetic `default` package and `default` app when none is declared.
 
+The supported generated-Nix subset is documented in
+[`docs/generated-nix-contract.md`](generated-nix-contract.md). That contract is
+the boundary between Leanix graph claims and what Nix still witnesses by
+parsing, evaluating, and building the generated backend artifact.
+
 The renderer emits one output block per active system. Each block binds its own
 `system` and `pkgs`, so package references such as
 `self.packages.${system}."hello"` stay system-local. Synthetic default packages

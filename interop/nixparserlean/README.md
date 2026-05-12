@@ -18,7 +18,9 @@ Experimental local-checkout smoke test, owned by the Rust e2e harness.
 
 This is not a shared AST package, not a stable Lean dependency between the
 repositories, and not a proof that nixparserlean can execute the generated
-flake against real `nixpkgs`. Today the useful boundary is:
+flake against real `nixpkgs`. The maintained backend contract is documented in
+[`docs/generated-nix-contract.md`](../../docs/generated-nix-contract.md).
+Today the useful boundary is:
 
 ```text
 Leanix value -> generated flake.nix -> nixparserlean --desugar JSON / --eval
@@ -93,6 +95,13 @@ Nix AST normalization layer. The useful boundary is that Leanix declares the
 facts it expects from generated flakes, and the Rust harness checks those facts
 against an independent parser before running the narrow top-level eval smoke
 test.
+
+Failure output is classified as far as the harness can tell locally:
+
+- missing nixparserlean checkout
+- stale or broken sibling checkout
+- desugar/eval failure for generated Nix
+- parsed-contract mismatch
 
 It intentionally does not run `nix flake check`; Leanix's main Rust e2e
 harness already owns the Nix backend smoke test.

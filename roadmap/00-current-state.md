@@ -1,13 +1,12 @@
 # Current State
 
 This is a snapshot of the project as of 2026-05-12 after the roadmap wave from
-`TICKET-0034` through `TICKET-0049` has landed.
+`TICKET-0034` through `TICKET-0050` has landed.
 
 ## Repository State
 
-- `.tickets/TICKET-0001` through `.tickets/TICKET-0049` are completed.
-- The remaining active agent-legible roadmap wave is `TICKET-0050` and
-  `TICKET-0051`.
+- `.tickets/TICKET-0001` through `.tickets/TICKET-0050` are completed.
+- The remaining active agent-legible roadmap wave is `TICKET-0051`.
 - `TICKET-0045` and `TICKET-0046` record CI-regression follow-up work around
   pinned GitHub input rendering and local CI parity.
 - Two untracked files exist locally, `flagged.md` and `result`. They are not
@@ -106,6 +105,8 @@ Implemented:
   `ValidatedFlake.checkedOutputs`, before generated Nix exists.
 - `docs/escape-hatches.md` classifies raw backend escape hatches by policy
   context, and ordinary hello-family checks use typed command constructors.
+- `docs/generated-nix-contract.md` records the supported generated-Nix backend
+  subset and separates Leanix graph claims from Nix witness claims.
 - Generated Nix emits active-system output blocks.
 - Package and app defaults are synthesized where needed.
 - Formatter outputs render as `formatter.${system}`.
@@ -154,6 +155,9 @@ It currently covers:
 - focused registry checks through `--check-example NAME`
 - focused valid-case filters through repeated `--only NAME`
 - optional nixparserlean interop through `--nixparserlean-dir`
+- optional interop reports missing checkout, stale/broken checkout,
+  desugar/eval failure, and parsed-contract mismatch separately where
+  practical
 
 The harness deliberately has no external Rust crates.
 
