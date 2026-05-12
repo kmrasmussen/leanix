@@ -41,3 +41,17 @@ make the code reflect that decision.
 ## Notes
 Removing first and adding back later is acceptable; the goal is to stop the
 "looks like Leanix models environment variables" misread of the current code.
+
+## Completion
+Completed by keeping `EnvVar` as part of the typed model and wiring it through
+validation, rendering, and the Rust e2e harness.
+
+Evidence:
+
+- `Leanix/Examples.lean` defines the `env` example plus duplicate and
+  unsupported-env invalid examples.
+- `e2e/golden/env.flake.nix` records the rendered package and dev-shell env
+  shape.
+- `e2e/runner/src/main.rs` covers the valid env rendering case and exact-stderr
+  duplicate/unsupported invalid cases.
+- `blog/2026-05-11-07-40-envvar-end-to-end.md` documents the decision.
