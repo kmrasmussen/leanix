@@ -55,4 +55,26 @@ Make backend leakage inspectable and reduce one common raw path.
 - `blog/yyyy-mm-dd-hh-mm-escape-hatch-inventory.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Classify the current escape hatches and policy behavior in a dedicated doc.
+2. Use the graph summary as the agent-facing escape-hatch inventory surface.
+3. Replace a repeated raw shell check with an existing typed check constructor.
+4. Preserve a deliberate raw fixture for strict policy rejection.
+5. Update e2e so raw escape visibility still has positive coverage.
+
+## Result
+- Added `docs/escape-hatches.md` with the escape-hatch inventory and policy
+  matrix.
+- Replaced the shared `helloCheck` raw shell command with
+  `CheckCommand.packageExecutableToOutput`.
+- Added `rawHelloCheck` as the explicit fixture for strict artifact policy
+  rejection.
+- Updated graph-summary e2e to use the `self` example as the raw-shell
+  visibility contrast.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.
+- Passed: `scripts/ci-local`.

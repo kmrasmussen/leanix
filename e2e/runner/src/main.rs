@@ -1470,21 +1470,21 @@ fn run_graph_summary_case(repo: &Path) -> Result<(), String> {
         require_summary_fragment(&showcase_summary, "showcase", expected)?;
     }
 
-    let hello_output = "generated/hello-summary.json";
+    let self_output = "generated/self-summary.json";
     run(
         repo,
         "lake",
-        &["exe", "leanix", "summarize", "hello", "--out", hello_output],
+        &["exe", "leanix", "summarize", "self", "--out", self_output],
     )?;
-    let hello_summary = fs::read_to_string(repo.join(hello_output))
-        .map_err(|err| format!("failed reading {hello_output}: {err}"))?;
+    let self_summary = fs::read_to_string(repo.join(self_output))
+        .map_err(|err| format!("failed reading {self_output}: {err}"))?;
     for expected in [
         "\"commandKind\": \"rawShell\"",
         "\"rawEscapeHatches\": [",
-        "\"owner\": \"check hello\"",
+        "\"owner\": \"check build\"",
         "\"escape\": \"raw shell command\"",
     ] {
-        require_summary_fragment(&hello_summary, "hello", expected)?;
+        require_summary_fragment(&self_summary, "self", expected)?;
     }
 
     Ok(())

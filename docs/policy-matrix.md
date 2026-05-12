@@ -20,6 +20,9 @@ escape-hatch validation. It now also controls source/input policy.
 | Raw check command | allowed | rejected | rejected |
 | Typed build/check constructors | allowed | allowed | allowed |
 
+The raw escape-hatch inventory and current reduction notes are maintained in
+[`docs/escape-hatches.md`](escape-hatches.md).
+
 ## Claims
 
 Development policy is for iteration. It keeps local sources, floating refs, and

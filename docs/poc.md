@@ -296,7 +296,8 @@ Raw text and shell remain as explicit escape hatches in five places:
 - `CheckCommand.rawShell`, for checks that do not fit the typed command surface
 
 Those escape hatches are part of the prototype boundary, not the desired long
-term source of build semantics.
+term source of build semantics. The current inventory and reduction plan live
+in [`docs/escape-hatches.md`](escape-hatches.md).
 
 Escape-hatch validation is policy-driven. The default development policy keeps
 these raw forms usable so existing examples remain ergonomic. Strict artifact

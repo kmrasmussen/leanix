@@ -35,6 +35,15 @@ def helloDevShell : DevShell .x86_64_linux where
 def helloCheck : Check .x86_64_linux where
   name := "hello"
   packageName := "hello"
+  command := .packageExecutableToOutput {
+    packageName := "hello"
+    executable := "hello"
+    arguments := ["--version"]
+  }
+
+def rawHelloCheck : Check .x86_64_linux where
+  name := "hello"
+  packageName := "hello"
   command := "hello --version > \"$out\""
 
 def helloOutputs : Outputs where
@@ -848,7 +857,7 @@ def rawCheckArtifactProject : CliProject .x86_64_linux where
   package := helloPackage
   app := { helloApp with name := "default" }
   devShell := helloDevShell
-  check := { helloCheck with name := "default" }
+  check := { rawHelloCheck with name := "default" }
 
 def showcaseFlake : Except String ValidatedFlake := do
   let validated ←

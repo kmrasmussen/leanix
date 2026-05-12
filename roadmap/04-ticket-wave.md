@@ -100,6 +100,8 @@ Acceptance:
 
 ## TICKET-0049: Escape-Hatch Inventory and Reduction Plan
 
+Status: completed.
+
 Problem:
 
 Raw escape hatches are explicitly named, but the project does not yet expose a

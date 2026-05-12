@@ -37,11 +37,11 @@ The showcase summary records that `helloWrapper` depends on `helloTool`, the
 default app points at `helloWrapper`, the default check uses
 `packageExecutableToOutput`, and the example has no raw escape hatches.
 
-The `hello` summary is useful as a negative contrast because its check uses a
-raw shell command:
+The `self` summary is useful as a negative contrast because its build check
+still uses a raw shell command:
 
 ```bash
-lake exe leanix summarize hello --out generated/hello-summary.json
+lake exe leanix summarize self --out generated/self-summary.json
 ```
 
 ## Agent Questions

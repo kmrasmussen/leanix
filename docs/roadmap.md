@@ -103,6 +103,8 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   graph validity plus app, dev-shell, check, and formatter references.
 - ✅ `leanix summarize NAME --out FILE` emits an experimental agent-legible
   graph summary from checked Leanix values before Nix rendering.
+- ✅ Escape hatches are inventoried in `docs/escape-hatches.md`, and the shared
+  hello check now uses a typed command constructor.
 - ⬜ Prove that successful validation implies renderable output for the
   supported Nix backend subset.
 - ⬜ Prove the topological checker's success means no package dependency cycles.
@@ -126,8 +128,8 @@ escape policy, and replay metadata.
 
 ## Operational
 
-- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0048`
-  are complete, and `TICKET-0049` through `TICKET-0051` are the remaining
+- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0049`
+  are complete, and `TICKET-0050` through `TICKET-0051` are the remaining
   agent-legible roadmap wave.
 - ✅ CI workflow exists in `.github/workflows/ci.yml`.
 - ✅ Source trust modeling is represented by `Input.source`,
