@@ -384,6 +384,19 @@ Run it from the repo root:
 cargo run --locked --manifest-path e2e/runner/Cargo.toml
 ```
 
+The full harness remains the required local/CI gate. For faster development
+loops, the same Rust runner also exposes focused paths:
+
+```sh
+cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --check-example hello
+cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --only hello --only showcase
+```
+
+`--check-example NAME` uses the public CLI example registry, renders that
+example to `generated/flake.nix`, and runs `nix flake check path:./generated`.
+`--only NAME` filters the normal valid render/check case list by registry name;
+repeat it to run a small subset while debugging a renderer or schema change.
+
 ## Success Criteria — status
 
 - ✅ `lake build` succeeds.

@@ -124,11 +124,13 @@ escape policy, and replay metadata.
 
 ## Operational
 
-- 🟡 Backlog lives under `.tickets/`; the active next wave is
-  `TICKET-0034` through `TICKET-0044`.
+- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0043`
+  are complete, `TICKET-0044` is the active policy slice, and
+  `roadmap/04-ticket-wave.md` proposes the next agent-legible roadmap wave.
 - ✅ CI workflow exists in `.github/workflows/ci.yml`.
 - ✅ Source trust modeling is represented by `Input.source`,
   `Input.localDevSource`, and `Input.impureLocalSource`.
 - ✅ CLI example registry exists via `leanix list-examples` and
   `leanix render NAME --out FILE`.
-- ⬜ Focused render-and-check workflow and e2e filters.
+- ✅ Focused render-and-check workflow and e2e filters live in the Rust runner
+  via `--check-example NAME` and repeated `--only NAME`.

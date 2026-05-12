@@ -50,4 +50,27 @@ for faster development loops.
 - `blog/yyyy-mm-dd-hh-mm-cli-check-command-e2e-filters.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Keep the full Rust e2e harness as the default gate.
+2. Add a focused registry example check that renders one example and runs
+   `nix flake check`.
+3. Add a valid-case filter for smaller e2e loops.
+4. Document when the focused paths are useful.
+
+## Result
+- Added `--check-example NAME` to the Rust runner. It renders the named CLI
+  registry example to `generated/flake.nix` and runs
+  `nix flake check path:./generated`.
+- Added repeated `--only NAME` filters for the normal valid render/check case
+  list, keyed by CLI registry names.
+- Left the default runner path as the full e2e gate.
+- Documented the focused commands in the README, examples guide, PoC docs, and
+  roadmap state.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --check-example hello`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --only hello --only showcase`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.

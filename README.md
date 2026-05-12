@@ -2,11 +2,17 @@
 
 Leanix is an adjacent project to `nixparserlean`.
 
-**Mission:** Nix flakes as Lean-checked build graphs.
+**Mission:** a typed control plane over Nix, starting with Lean-checked build
+graphs.
 
 `nixparserlean` models existing Nix in Lean. Leanix starts from the other side:
-what if flakes were typed first? Lean becomes the authoring language for
-reproducible build graphs, and Nix interop becomes a backend.
+what if flakes were typed first? Lean becomes the authoring and reasoning layer
+for reproducible build graphs, and Nix interop becomes the backend.
+
+The long-term vision is agent-legible infrastructure: important relationships
+between sources, packages, checks, services, policies, and eventually machines
+should be represented as typed Leanix structures before Nix realizes the
+generated artifact. See [`docs/vision.md`](docs/vision.md).
 
 Lean owns the typed model, validation, and rendering. Rust owns e2e harnesses,
 subprocess orchestration, filesystem work, and generated-flake smoke tests.
@@ -111,6 +117,8 @@ lake exe leanix render-multi-app-schema --out generated/flake.nix
 nix flake check path:./generated
 lake exe leanix render-self --source path:/home/kasper/projects/leanix --out generated/flake.nix
 cargo run --locked --manifest-path e2e/runner/Cargo.toml
+cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --check-example hello
+cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --only hello --only showcase
 ```
 
 Before pushing, run the same required gate as GitHub Actions:

@@ -15,13 +15,18 @@ and committed independently. Tickets are the map; commits are the trail.
 The post-`TICKET-0025` roadmap wave was materialized as `TICKET-0026` through
 `TICKET-0033` and is now complete.
 
-The active next roadmap wave is materialized as `TICKET-0034` through
-`TICKET-0044`. `TICKET-0034` through `TICKET-0038` are complete; `TICKET-0039`
-through `TICKET-0044` remain ready to pick up as implementation slices.
+The roadmap wave `TICKET-0034` through `TICKET-0044` is materialized.
+`TICKET-0034` through `TICKET-0043` are complete; `TICKET-0044` remains ready
+to pick up as the next implementation slice.
 
 `TICKET-0045` and `TICKET-0046` track the 2026-05-12 CI regression follow-up:
 the pinned GitHub input rendering failure and a local CI parity workflow before
 push.
+
+After `TICKET-0044`, the agent-legible roadmap wave is materialized as
+`TICKET-0047` through `TICKET-0051`: artifact contract, graph summary,
+escape-hatch inventory, generated-Nix backend contract, and a NixOS
+control-plane design spike.
 
 Use `roadmap/00-current-state.md`, `roadmap/02-milestones.md`,
 `roadmap/03-workstreams.md`, and `roadmap/05-verification-strategy.md` as the

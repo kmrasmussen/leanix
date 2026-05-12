@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 struct Case {
+    registry_name: &'static str,
     name: &'static str,
     render_arg: &'static str,
     source_arg: bool,
@@ -21,6 +22,8 @@ struct Args {
     repo: Option<PathBuf>,
     nixparserlean_dir: Option<PathBuf>,
     only_nixparserlean_interop: bool,
+    only_cases: Vec<String>,
+    check_example: Option<String>,
 }
 
 struct InteropCase {
@@ -140,6 +143,37 @@ fn run_case(repo: &Path, case: &Case) -> Result<(), String> {
 
     run(repo, "nix", &["flake", "check", "path:./generated"])?;
 
+    Ok(())
+}
+
+fn run_focused_example_check(repo: &Path, name: &str) -> Result<(), String> {
+    eprintln!("case: focused example check ({name})");
+    let output = "generated/flake.nix";
+    let source = format!("path:{}", repo.display());
+
+    if name == "self" {
+        run(
+            repo,
+            "lake",
+            &[
+                "exe",
+                "leanix",
+                "render-self",
+                "--source",
+                &source,
+                "--out",
+                output,
+            ],
+        )?;
+    } else {
+        run(
+            repo,
+            "lake",
+            &["exe", "leanix", "render", name, "--out", output],
+        )?;
+    }
+
+    run(repo, "nix", &["flake", "check", "path:./generated"])?;
     Ok(())
 }
 
@@ -1281,8 +1315,36 @@ fn run_registry_case(repo: &Path) -> Result<(), String> {
     }
 }
 
+fn run_selected_cases(repo: &Path, cases: &[Case], selected: &[String]) -> Result<(), String> {
+    if selected.is_empty() {
+        for case in cases {
+            eprintln!("case: {}", case.name);
+            run_case(repo, case)?;
+        }
+        return Ok(());
+    }
+
+    for name in selected {
+        let case = cases
+            .iter()
+            .find(|case| case.registry_name == name)
+            .ok_or_else(|| {
+                let known = cases
+                    .iter()
+                    .map(|case| case.registry_name)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!("unknown --only case {name}; known render cases: {known}")
+            })?;
+        eprintln!("case: {}", case.name);
+        run_case(repo, case)?;
+    }
+
+    Ok(())
+}
+
 fn usage() -> &'static str {
-    "usage: leanix-e2e-runner [--repo PATH] [--nixparserlean-dir PATH] [--only-nixparserlean-interop]\n       leanix-e2e-runner --help"
+    "usage: leanix-e2e-runner [--repo PATH] [--nixparserlean-dir PATH] [--only-nixparserlean-interop] [--only NAME]... [--check-example NAME]\n       leanix-e2e-runner --help"
 }
 
 fn is_repo_root(path: &Path) -> bool {
@@ -1316,6 +1378,8 @@ fn parse_args() -> Result<Args, String> {
     let mut repo = None;
     let mut nixparserlean_dir = None;
     let mut only_nixparserlean_interop = false;
+    let mut only_cases = Vec::new();
+    let mut check_example = None;
     let mut index = 0usize;
 
     while index < args.len() {
@@ -1341,6 +1405,20 @@ fn parse_args() -> Result<Args, String> {
             "--only-nixparserlean-interop" => {
                 only_nixparserlean_interop = true;
             }
+            "--only" => {
+                index += 1;
+                let name = args
+                    .get(index)
+                    .ok_or_else(|| format!("{}\n--only requires NAME", usage()))?;
+                only_cases.push(name.clone());
+            }
+            "--check-example" => {
+                index += 1;
+                let name = args
+                    .get(index)
+                    .ok_or_else(|| format!("{}\n--check-example requires NAME", usage()))?;
+                check_example = Some(name.clone());
+            }
             unknown => {
                 return Err(format!("{}\nunknown argument: {}", usage(), unknown));
             }
@@ -1352,6 +1430,8 @@ fn parse_args() -> Result<Args, String> {
         repo,
         nixparserlean_dir,
         only_nixparserlean_interop,
+        only_cases,
+        check_example,
     })
 }
 
@@ -1392,6 +1472,24 @@ fn main() -> Result<(), String> {
     let repo = repo_root(args.repo)?;
     let nixparserlean_dir = configured_nixparserlean_dir(args.nixparserlean_dir)?;
 
+    if args.only_nixparserlean_interop && args.check_example.is_some() {
+        return Err(
+            "--only-nixparserlean-interop cannot be combined with --check-example".to_string(),
+        );
+    }
+    if args.only_nixparserlean_interop && !args.only_cases.is_empty() {
+        return Err("--only-nixparserlean-interop cannot be combined with --only".to_string());
+    }
+    if args.check_example.is_some() && !args.only_cases.is_empty() {
+        return Err("--check-example cannot be combined with --only".to_string());
+    }
+
+    if let Some(example) = args.check_example.as_deref() {
+        run_focused_example_check(&repo, example)?;
+        eprintln!("e2e: focused example check passed");
+        return Ok(());
+    }
+
     if args.only_nixparserlean_interop {
         let nixparserlean_dir = nixparserlean_dir.ok_or_else(|| {
             "--only-nixparserlean-interop requires --nixparserlean-dir PATH or NIXPARSERLEAN_DIR"
@@ -1404,6 +1502,7 @@ fn main() -> Result<(), String> {
 
     let cases = [
         Case {
+            registry_name: "hello",
             name: "typed hello flake",
             render_arg: "render-example",
             source_arg: false,
@@ -1411,6 +1510,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/hello.flake.nix"),
         },
         Case {
+            registry_name: "self",
             name: "self flake",
             render_arg: "render-self",
             source_arg: true,
@@ -1418,6 +1518,7 @@ fn main() -> Result<(), String> {
             golden: None,
         },
         Case {
+            registry_name: "closure",
             name: "typed closure flake",
             render_arg: "render-closure",
             source_arg: false,
@@ -1425,6 +1526,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/closure.flake.nix"),
         },
         Case {
+            registry_name: "cli-schema",
             name: "typed CLI schema flake",
             render_arg: "render-cli-schema",
             source_arg: false,
@@ -1432,6 +1534,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/cli-schema.flake.nix"),
         },
         Case {
+            registry_name: "library-schema",
             name: "library schema flake",
             render_arg: "render-library-schema",
             source_arg: false,
@@ -1439,6 +1542,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/library-schema.flake.nix"),
         },
         Case {
+            registry_name: "formatter-schema",
             name: "formatter schema flake",
             render_arg: "render-formatter-schema",
             source_arg: false,
@@ -1446,6 +1550,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/formatter-schema.flake.nix"),
         },
         Case {
+            registry_name: "multi-app-schema",
             name: "multi-app schema flake",
             render_arg: "render-multi-app-schema",
             source_arg: false,
@@ -1453,6 +1558,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/multi-app-schema.flake.nix"),
         },
         Case {
+            registry_name: "service-schema",
             name: "service schema flake",
             render_arg: "render-service-schema",
             source_arg: false,
@@ -1460,6 +1566,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/service-schema.flake.nix"),
         },
         Case {
+            registry_name: "showcase",
             name: "proof-carrying CLI closure showcase",
             render_arg: "render-showcase",
             source_arg: false,
@@ -1467,6 +1574,7 @@ fn main() -> Result<(), String> {
             golden: Some("examples/proof-carrying-cli-closure/expected.flake.nix"),
         },
         Case {
+            registry_name: "escaping",
             name: "renderer escaping flake",
             render_arg: "render-escaping",
             source_arg: false,
@@ -1474,6 +1582,7 @@ fn main() -> Result<(), String> {
             golden: None,
         },
         Case {
+            registry_name: "multi-system",
             name: "multi-system renderer flake",
             render_arg: "render-multi-system",
             source_arg: false,
@@ -1481,6 +1590,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/multi-system.flake.nix"),
         },
         Case {
+            registry_name: "multi-system-schema",
             name: "multi-system schema flake",
             render_arg: "render-multi-system-schema",
             source_arg: false,
@@ -1488,6 +1598,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/multi-system-schema.flake.nix"),
         },
         Case {
+            registry_name: "pinned-inputs",
             name: "pinned flake input",
             render_arg: "render-pinned-inputs",
             source_arg: false,
@@ -1495,6 +1606,7 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/pinned-inputs.flake.nix"),
         },
         Case {
+            registry_name: "env",
             name: "env var rendering",
             render_arg: "render-env",
             source_arg: false,
@@ -1629,9 +1741,10 @@ fn main() -> Result<(), String> {
         },
     ];
 
-    for case in cases {
-        eprintln!("case: {}", case.name);
-        run_case(&repo, &case)?;
+    run_selected_cases(&repo, &cases, &args.only_cases)?;
+    if !args.only_cases.is_empty() {
+        eprintln!("e2e: selected cases passed");
+        return Ok(());
     }
 
     run_artifact_case(&repo)?;

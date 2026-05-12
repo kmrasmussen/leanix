@@ -1,9 +1,10 @@
 # TICKET-0044: Policy Matrix for CI and Impure Sources
 
 ## Roadmap Source
-This ticket materializes the next policy-layer slice from:
+This ticket materializes the first SMART milestone in the agent-legible
+roadmap:
 
-- `roadmap/02-milestones.md` Milestone 7: Policy Layer
+- `roadmap/02-milestones.md` Goal 1: Policy Matrix V1
 - `roadmap/03-workstreams.md` Workstream B: Validation and Proof Evidence
 - `roadmap/04-ticket-wave.md` TICKET-0044
 - `roadmap/06-open-questions.md` How Strict Should Artifact Policy Be?

@@ -1,180 +1,190 @@
-# Future Milestones
+# SMART Milestones
 
-The roadmap is organized as milestones that can become ticket waves. Each
-milestone should be small enough to land with documentation, e2e coverage, a
-blog note, and a commit.
+This file defines the current four-week roadmap horizon from 2026-05-12 through
+2026-06-09.
 
-This file reflects the state after `TICKET-0035`. Completed slices remain
-important context, and the remaining concrete backlog is `TICKET-0036` through
-`TICKET-0044` in `roadmap/04-ticket-wave.md`.
+The long-term vision is agent-legible infrastructure: Leanix should let an
+agent reason about build and operating-system structure from typed Leanix values
+instead of reverse-engineering generated Nix. The near-term route is a narrow,
+measurable vertical slice, not broad Nix or NixOS replacement.
 
-## Milestone 1: Schema Catalog V2
+## Goal 1: Policy Matrix V1
 
-Goal: make Leanix useful for more than CLI demos without creating a universal
-schema language.
+Deadline: 2026-05-19.
 
-Already landed:
+Specific:
 
-- `CliProject`, `MultiSystemCliProject`, `LibraryProject`, `MultiAppProject`,
-  `FormatterProject`, and `ServiceProject`
-- valid examples, invalid e2e cases, and goldens for the current schema set
-- schema catalog reference docs that explain when to use each schema
+- Define explicit policy contexts for development, CI, and strict artifacts.
+- Specify how each context treats floating flake refs, lockfile witnesses,
+  fixed-output sources, local development sources, impure local sources, raw
+  build steps, and raw shell checks.
+- Encode the policy in Lean validation or artifact emission paths, not only in
+  prose.
 
-Next deliverables:
+Measurable:
 
-- shared schema helper extraction only where repeated conventions justify it
+- `TICKET-0044` is completed.
+- At least one CI-only or artifact-only rejection has an exact stderr e2e case.
+- Artifact manifests still record the active policy.
+- `docs/poc.md` or a dedicated policy reference names every policy class.
 
-Acceptance checks:
+Achievable:
 
-- new schemas lower through `ValidatedSchema`
-- invalid schema errors name the violated convention
-- examples pass `nix flake check`
-- docs clearly describe schema choice
+- The project already has development and strict artifact escape policies,
+  input trust classes, and Rust e2e rejection cases.
 
-## Milestone 2: BuildPlan V2
+Relevant:
 
-Goal: make build plans the normal package authoring surface.
+- Policy is the line between ergonomic development and claims that an agent can
+  safely trust in CI or artifacts.
 
-Already landed:
+Time-bound acceptance:
 
-- typed build-plan constructors for known nixpkgs packages, executable text
-  wrappers, input tree/file copies, text-file installation, running package
-  executables, and building Lean packages from input trees
-- validation for duplicate args and missing source/input/package references
-- conservative path/destination validation for build-plan argument records
-- multiple examples using `Package.fromBuildPlan`
+- By 2026-05-19, `nix develop --command lake build` and
+  `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`
+  pass with the new policy cases.
 
-Next deliverables:
+## Goal 2: Artifact Evidence Contract V1
 
-- clearer package dependency extraction from build plans before lowering
-- more examples migrated away from direct `BuildExpr.runSteps`
+Deadline: 2026-05-26.
 
-Acceptance checks:
+Specific:
 
-- at least two additional examples use `Package.fromBuildPlan`
-- generated goldens stay stable or intentionally change with explanation
-- invalid plan cases have exact stderr e2e tests
+- Document the manifest schema and version policy for generated artifacts.
+- Make the Rust generic verifier reject missing or mismatched required manifest
+  fields, not only tampered files.
+- Move at least one replay check from showcase-specific expectations to
+  manifest-declared data.
 
-## Milestone 3: Artifact Manifest V2
+Measurable:
 
-Goal: make artifacts verifiable beyond the showcase hard-coded contract.
+- At least two artifact shapes verify through the same Rust verifier path.
+- The verifier checks generated files, file hashes, replay command metadata,
+  input policy, escape policy, and manifest schema/version fields.
+- A manifest reference document lists each field as checked, Lean-evidence,
+  backend-witnessed, or informational.
 
-Already landed:
+Achievable:
 
-- manifest-driven generated-file checks
-- file hash recording and tamper rejection
-- lockfile witness metadata
-- strict artifact escape policy
-- input policy rejection cases
+- The Rust e2e harness already performs generic preflight over showcase and
+  service artifacts.
 
-Next deliverables:
+Relevant:
 
-- Rust-owned generic artifact verifier
-- multiple artifact examples
-- manifest schema/version reference docs
-- replay command execution from manifest data rather than showcase-specific
-  expectations
+- Leanix artifacts are where typed intent becomes something a user or agent can
+  carry, inspect, replay, and trust without treating generated Nix as the source
+  of truth.
 
-Acceptance checks:
+Time-bound acceptance:
 
-- at least two artifact directories can be emitted and verified
-- verifier rejects tampered and missing generated files
-- verifier rejects missing or mismatched manifest fields
-- development render commands remain unchanged
+- By 2026-05-26, both artifact examples pass the generic verifier, and at least
+  two negative manifest cases fail with exact stderr.
 
-## Milestone 4: Package Closure Proof V2
+## Goal 3: Agent-Legible Graph Summary V1
 
-Goal: connect package closure evidence to a clearer graph property.
+Deadline: 2026-06-02.
 
-Already landed:
+Specific:
 
-- explicit package graph relation over package names
-- named package closure properties for reference resolution and fuel-bounded
-  cycle rejection
+- Add a machine-readable summary for one checked flake or registry example.
+- The summary should expose systems, inputs, packages, apps, checks,
+  formatters, source trust classes, policies, package edges, and raw escape
+  hatches.
+- Keep the summary derived from checked Leanix values, not from generated Nix.
 
-Next deliverables:
+Measurable:
 
-- topological or proof-friendlier cycle checker
-- lemmas connecting successful checks to named graph properties
-- checked per-system output evidence
-- updated proof strategy docs
+- A command or Rust harness path emits the summary for at least one canonical
+  example.
+- The e2e harness verifies key fields in that summary.
+- Documentation lists at least six questions an agent can answer from the
+  summary without reading generated Nix.
 
-Acceptance checks:
+Achievable:
 
-- `CheckedPackageGraph` examples elaborate without brittle proof terms
-- invalid cycle e2e remains exact
-- proof names in artifact manifest stay meaningful
+- `ValidatedFlake`, `CheckedSystemOutputs`, manifest emission, and the example
+  registry already contain most of the needed data.
 
-## Milestone 5: NixParserLean Contract V2
+Relevant:
 
-Goal: replace fragile parsed-Nix string checks with a meaningful contract.
+- This is the first concrete step from "typed flakes" toward infrastructure an
+  agent can inspect directly.
 
-Already landed:
+Time-bound acceptance:
 
-- parsed-contract checks for selected generated examples
-- input declarations, output families, systems, formatters, and selected
-  default aliases in the optional interop lane
-- docs that state the parse/desugar/top-level eval boundary
+- By 2026-06-02, `scripts/ci-local` passes and the summary is documented as a
+  developer-facing experimental contract.
 
-Next deliverables:
+## Goal 4: Backend Contract V1
 
-- dedicated summary mode in `nixparserlean`, or a stable JSON subset that is
-  less path/string-fragment driven
-- artifact-flake interop case
-- better stale sibling-checkout reporting
+Deadline: 2026-06-09.
 
-Acceptance checks:
+Specific:
 
-- `cargo run ... -- --nixparserlean-dir ../nixparserlean` verifies the richer
-  contract
-- interop docs clearly state parse/desugar/eval boundaries
-- generated files remain ephemeral under `generated/`
+- Document the supported generated-Nix subset as a backend contract.
+- Strengthen the optional `nixparserlean` interop check around that contract,
+  either through a dedicated summary mode or a stable, less-fragile JSON subset.
+- Clearly separate Leanix graph correctness claims from Nix backend witness
+  claims.
 
-## Milestone 6: CLI and Developer Experience
+Measurable:
 
-Goal: make Leanix easier to use without weakening the model.
+- The backend contract lists supported input forms, output families, defaults,
+  build expression forms, and known unsupported Nix features.
+- Optional interop covers the canonical artifact flake and at least three
+  registry examples.
+- Interop failures report whether the likely issue is Leanix output,
+  contract drift, or sibling-checkout availability.
 
-Already landed:
+Achievable:
 
-- `leanix list-examples`
-- generic `leanix render NAME --out FILE`
-- compatibility preservation for old `render-*` commands
-- registry e2e coverage
+- The optional interop lane already parses/desugars/evals selected generated
+  flakes and the artifact flake.
 
-Next deliverables:
+Relevant:
 
-- focused render-and-check workflow, likely Rust-owned
-- e2e case filters for faster development loops
-- better structured CLI/help output if the current Lean command grows too much
-- docs that map examples, checks, and proof boundaries
+- Nix remains the active backend. Leanix must know the subset it emits and keep
+  backend leakage visible.
 
-Acceptance checks:
+Time-bound acceptance:
 
-- old commands continue working unless intentionally deprecated
-- e2e covers new user-facing command paths
-- subprocess orchestration stays in Rust unless there is a strong reason
+- By 2026-06-09, the standard e2e gate passes, and the optional
+  `--nixparserlean-dir ../nixparserlean` gate verifies the documented contract
+  when the sibling checkout is healthy.
 
-## Milestone 7: Policy Layer
+## Goal 5: NixOS Control-Plane Design Spike
 
-Goal: make reproducibility, trust, and escape-hatch policies explicit.
+Deadline: 2026-06-09.
 
-Already landed:
+Specific:
 
-- development and strict artifact escape policies
-- artifact manifests record active escape policy
-- strict artifact policy rejects raw check/build-script escape hatches
-- artifact input policy rejects unsupported floating refs
+- Write a design note for the first Leanix representation that points beyond
+  flakes toward OS control.
+- The note should model one tiny host/service relationship, such as a host
+  profile, a service package, a port, a user, and a check, without claiming to
+  replace NixOS modules.
+- Identify which parts would lower to NixOS/Nix later and which parts should be
+  reasoned about in Leanix.
 
-Next deliverables:
+Measurable:
 
-- CI policy value or policy record
-- explicit behavior for floating flake refs, impure local sources, raw shell,
-  and missing artifact evidence across development, CI, and strict artifact
-  contexts
-- e2e coverage for at least one policy rejection per policy class
+- The design note includes one small typed sketch, a validation checklist, and
+  a backend-lowering sketch.
+- It names at least five agent questions that become answerable at the Leanix
+  layer.
+- It produces either one follow-up implementation ticket or an explicit decision
+  not to implement yet.
 
-Acceptance checks:
+Achievable:
 
-- development examples stay ergonomic
-- CI/artifact examples are stricter where documented
-- e2e covers policy rejections with exact stderr
+- This is a design spike only; it should not attempt NixOS module generation in
+  the first pass.
+
+Relevant:
+
+- The long-term vision is operating-system control, not only typed flake
+  examples.
+
+Time-bound acceptance:
+
+- By 2026-06-09, the design note is committed and linked from the roadmap.

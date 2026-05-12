@@ -10,6 +10,12 @@ Use `leanix list-examples` to print the registry of renderable examples. Use
 using the older `render-*` commands when you want the stable compatibility
 spelling used by existing e2e fixtures.
 
+For a fast render-and-check loop around one registry example, run:
+
+```sh
+cargo run --locked --manifest-path e2e/runner/Cargo.toml -- --check-example hello
+```
+
 For schema selection, guarantees, and raw-`Flake` boundaries, see
 [`docs/schema-catalog.md`](../docs/schema-catalog.md).
 

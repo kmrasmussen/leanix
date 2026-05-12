@@ -1,14 +1,17 @@
 # Current State
 
-This is a snapshot of the project after the completed ticket wave ending at
-commit `4182005` (`Add next roadmap ticket wave`), plus the current
-`ServiceProject` schema work.
+This is a snapshot of the project as of 2026-05-12 after the roadmap wave from
+`TICKET-0034` through `TICKET-0043` has effectively landed locally.
+`TICKET-0044` remains the next planned policy-layer implementation slice.
 
 ## Repository State
 
-- The main branch is up to date with `origin/main`.
-- All `.tickets/TICKET-0001` through `.tickets/TICKET-0033` are marked
-  `completed`.
+- The local checkout has uncommitted work for `TICKET-0043` documentation and
+  Rust e2e filters.
+- `.tickets/TICKET-0001` through `.tickets/TICKET-0044` have materialized
+  ticket-state files; `TICKET-0044` is still open as the next policy slice.
+- `TICKET-0045` and `TICKET-0046` record CI-regression follow-up work around
+  pinned GitHub input rendering and local CI parity.
 - Two untracked files exist locally, `flagged.md` and `result`. They are not
   part of the tracked project state and should not be treated as roadmap input
   unless intentionally reviewed later.
@@ -142,6 +145,8 @@ It currently covers:
 - checked per-system output evidence carried on `ValidatedFlake`
 - invalid examples with exact stderr checks
 - CLI example registry listing and generic rendering
+- focused registry checks through `--check-example NAME`
+- focused valid-case filters through repeated `--only NAME`
 - optional nixparserlean interop through `--nixparserlean-dir`
 
 The harness deliberately has no external Rust crates.

@@ -1,41 +1,61 @@
-# Leanix Future Roadmap
+# Leanix Roadmap
 
-This folder is the forward-looking roadmap for Leanix after the first typed
-flake proof of concept.
+This folder is the operational roadmap for moving Leanix toward the long-term
+vision in [docs/vision.md](../docs/vision.md): a typed control plane over Nix
+where agents can reason about infrastructure from Leanix structures before Nix
+realizes the backend artifact.
 
-The older [docs/roadmap.md](../docs/roadmap.md) records phase status. This
-folder is more operational: it describes the current state, the design pressure
-that should guide the next work, concrete milestones, proposed ticket waves, and
-verification gates.
+The roadmap is not a broad replacement plan for Nix. Nix remains the practical
+backend. Leanix should advance by building small vertical slices where typed
+authoring, checked graph evidence, explicit policy, generated Nix, Rust-owned
+verification, and narrow interop feedback all connect.
+
+## Current Horizon
+
+The active horizon starts on 2026-05-12 and targets the next four weeks of work.
+
+The main objective is:
+
+```text
+make one narrow typed-flake subset agent-legible, policy-aware, and
+artifact-verifiable end to end
+```
+
+That means prioritizing:
+
+- policy contexts for development, CI, and strict artifacts
+- explicit raw escape-hatch inventory and rejection rules
+- machine-readable summaries of the checked graph
+- artifact manifests whose claims are checked by Rust or backed by Lean evidence
+- generated Nix contracts that remain narrow and independently checked
+- one first NixOS-control design slice that shows how the approach can grow
+  beyond flakes without pretending to replace NixOS yet
 
 ## Read Order
 
-1. [00-current-state.md](00-current-state.md) describes what is true in the
-   current checkout.
+1. [00-current-state.md](00-current-state.md) describes the current checkout.
 2. [01-product-and-model-principles.md](01-product-and-model-principles.md)
-   states the design rules that should keep the project coherent.
-3. [02-milestones.md](02-milestones.md) defines the next concrete milestones.
+   states the design rules that keep the project coherent.
+3. [02-milestones.md](02-milestones.md) defines SMART goals for the current
+   horizon.
 4. [03-workstreams.md](03-workstreams.md) breaks the roadmap into engineering
-   tracks.
-5. [04-ticket-wave.md](04-ticket-wave.md) proposes the next backlog wave.
+   ownership tracks.
+5. [04-ticket-wave.md](04-ticket-wave.md) proposes the next implementation
+   slices.
 6. [05-verification-strategy.md](05-verification-strategy.md) explains the
    gates every meaningful change should pass.
 7. [06-open-questions.md](06-open-questions.md) lists decisions that should
    remain explicit.
 
-## Current Direction
+## Roadmap Discipline
 
-Leanix should now move from "small PoC with typed outputs" to "small typed
-flake authoring system with proof-carrying artifacts." The right next work is
-not breadth across all of Nix. It is deeper ownership of a narrow subset:
+Every roadmap item should say:
 
-- typed authoring schemas for common project shapes
-- backend-neutral build plans that lower to Nix
-- stronger graph and schema evidence in Lean
-- artifact manifests with reproducibility evidence
-- Rust-owned e2e and interop checks
-- narrow parsed-Nix feedback from `nixparserlean`
+- what structure becomes more explicit in Leanix
+- what can be checked before rendering
+- what evidence is emitted or verified
+- what Nix still witnesses as the backend
+- what an agent can now answer without reading generated Nix
 
-The main risk is pretending Leanix is more complete than it is. The roadmap
-therefore keeps escape hatches explicit and makes proof, artifact, and interop
-claims narrow.
+If a change does not improve one of those points, it should probably stay out
+of the near-term roadmap.

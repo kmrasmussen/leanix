@@ -1,86 +1,137 @@
-# Leanix Vision
+# Leanix Long-Term Vision
 
-Leanix is an experiment in **Nix flakes as Lean-checked build graphs**.
+Leanix aims to be a typed control plane over Nix.
 
-## Relationship to NixParserLean
+Nix embodies a large amount of working infrastructure: nixpkgs, flakes, the
+store, builders, substituters, NixOS modules, and years of operational practice.
+Leanix should not try to replace that in the near term. It should derive value
+from it by making Nix the active backend while moving authoring and reasoning
+into Lean.
 
-`nixparserlean` is a faithful-modeling project. It parses Nix, validates Nix,
-desugars Nix, and gradually gives existing Nix code a Lean semantics.
+The long-term goal is agent-legible infrastructure: build graphs, package
+graphs, service graphs, policies, sources, machines, and eventually NixOS-like
+configuration should be explicit structures that a proof assistant, compiler,
+and software agent can inspect before any backend realization happens.
 
-Leanix is the adjacent experiment: keep the reproducible-build idea, but move
-the authoring language into Lean. Instead of accepting dynamically shaped
-attribute sets and discovering mistakes late, Leanix makes build graph shape,
-output names, system support, and source pinning explicit types.
+## The Problem
 
-Short version: what if flakes were typed first?
+Today, a large system configuration is often a mixture of:
 
-## What "Typed Flakes" Means in Leanix Today
+- dynamically shaped attribute sets
+- stringly typed conventions
+- shell fragments
+- late failures during evaluation or build
+- implicit relationships between packages, apps, checks, services, machines,
+  users, secrets, caches, and sources
+- backend-specific behavior that agents must infer by reading generated or
+  handwritten Nix
 
-A Nix flake is powerful because it packages inputs and outputs behind a stable
-interface. It is weakly typed because most of that interface is an attrset
-convention:
+This makes it hard for a strong agent to reason about the full structure of an
+operating system. The agent can run commands, inspect files, and learn local
+patterns, but the structure is not presented as a coherent typed object. Many
+important questions require partial evaluation, backend knowledge, and
+convention recovery.
 
-- `packages.${system}.default`
-- `apps.${system}.foo`
-- `devShells.${system}.default`
-- `checks.${system}.bar`
+Leanix exists to move those relationships into the foreground.
 
-Leanix models those conventions directly. The current model in `Leanix/Core.lean`
-gives:
+## The Desired World
 
-- a finite enumeration `System` (`x86_64-linux`, `aarch64-linux`,
-  `x86_64-darwin`, `aarch64-darwin`)
-- `Package system`, `App system`, `DevShell system`, `Check system` indexed by
-  `System` so an output cannot accidentally float to the wrong platform
-- `BuildExpr` with constructors for `nixpkgs` lookups, flake-input paths, typed
-  package references (`BuildExpr.package`), raw shell `runCommand`, and a small
-  structured `runSteps` (copy source, install executable script, build Lean
-  project, mkdir, writeFile, chmodExecutable, raw run). Generated script/file
-  text can use `BuildText` fragments so package references inside content are
-  validated instead of hiding as raw Nix interpolation.
-- `Input` with a `flake` / fixed-output `source` / `localDevSource` /
-  `impureLocalSource` distinction. Fetch-like `source` pins must carry a
-  `narHash`; local sources are explicitly development-only or impure.
-- a `Flake` record carrying a description, named inputs, and `Outputs` indexed
-  by `System`
+In the desired end state, an agent controlling a machine should be able to ask
+the Leanix layer questions such as:
 
-On top of that, `Leanix/Schema.lean` introduces typed output schemas:
+- Which packages, services, checks, and machines depend on this input?
+- Which sources are pinned, lockfile-backed, local-development only, or impure?
+- Which parts of the graph can run raw shell?
+- Which services can affect boot, networking, user sessions, or secrets?
+- What changes if this source pin moves?
+- Which packages are in the closure of this app?
+- Does every app, check, formatter, and service point at a package for the same
+  system?
+- Which claims are backed by Lean evidence, which are backed by Rust
+  verification, and which are delegated to Nix?
 
-- a `FlakeSchema` class (`toOutputs`, `validate`, `Valid : schema -> Prop`)
-- the first concrete schema, `CliProject system`, with one project package,
-  optional extra packages, a default app, default dev shell, and default check
-- `CliProject.Valid` records the equalities and membership facts that
-  `validateChecked` establishes
-- a `ValidatedSchema schema` wrapper that carries `FlakeSchema.Valid value`
-- a `ValidatedFlake` wrapper that carries evidence that `validateFlake`
-  succeeded
-- `Flake.fromValidatedSchema` and `Flake.fromSchema` for the two entry styles;
-  both produce `ValidatedFlake` before rendering
+Most of those questions should be answerable from Leanix structures, without
+spelunking through the generated Nix backend artifact.
 
-## Design Pressure
+## Relationship To Nix
 
-Leanix should stay honest about Nix's hard parts:
+Nix is the first backend and the practical realization layer.
 
-- builds are effectful even when derivations are pure descriptions
-- the store path model matters
-- fixed-output derivations and source fetching have special trust boundaries
-- cross compilation needs explicit host/build/target distinctions
-- flakes are partly package interface, partly lockfile protocol
-- real reproducibility includes binary caches, substituters, signatures, and
-  provenance, not just source hashes
+Leanix values should lower to ordinary Nix artifacts because that is how the
+system gets built, checked, cached, deployed, and integrated with existing
+workflows. The generated Nix is important, but it is not the source of truth.
 
-The current model is deliberately modest. It captures the shape of typed flake
-outputs and a small graph invariant (package closure, no cycles) before trying
-to reproduce the Nix evaluator.
+The source of truth is:
 
-## Possible End State
+```text
+Leanix value -> checked Leanix graph -> backend artifact -> Nix realization
+```
 
-Leanix could become:
+Leanix should keep backend leakage explicit and exceptional. When a model uses
+raw shell, a Nix-shaped builder, a local path, an impure source, a lockfile
+witness, or a backend-specific convention, that boundary should be named in the
+typed model and visible to policy checks.
 
-1. A Lean DSL for typed reproducible build graphs.
-2. A verifier for flake-like interface contracts.
-3. A renderer that emits ordinary `flake.nix`/derivation descriptions.
-4. A proof playground for dependency closure, system compatibility, source
-   pinning, and output-schema invariants.
-5. A producer of proof-carrying flake artifacts that bundle source, manifest,
-   checked invariants, and a verifiable Nix witness (see TICKET-0007).
+## What Leanix Must Own
+
+Leanix should own the authoring and reasoning layer:
+
+- typed source and input declarations
+- supported systems and system-indexed outputs
+- package, app, dev shell, check, formatter, service, and machine relations
+- build-plan intent before backend lowering
+- validation boundaries that produce checked graph values
+- policy contexts for development, CI, and strict artifacts
+- proof-carrying or evidence-carrying artifacts
+- queryable summaries that are easy for agents to consume
+
+Nix should own the backend realization layer:
+
+- actual derivation realization
+- store paths
+- nixpkgs integration
+- binary caches and substituters
+- NixOS integration while Leanix is still young
+- final `nix build`, `nix flake check`, and deployment witnesses
+
+Rust should own effectful tooling around the model:
+
+- e2e harnesses
+- subprocess orchestration
+- filesystem crawling
+- artifact verification
+- lockfile and cache workflows
+- operator commands that need OS effects
+
+## Long-Term Bet
+
+The bet is that Lean is a strong enough abstraction layer to make the important
+relationships explicit and checkable before Nix sees the generated artifact.
+
+Leanix does not need to model all of Nix first. It needs to grow a vertical
+slice where the abstraction is strong enough that most reasoning happens above
+the backend:
+
+```text
+typed intent
+  -> checked graph evidence
+  -> explicit policy
+  -> generated Nix
+  -> Nix backend witness
+```
+
+Each slice should be small enough to run, but ambitious enough to make an agent
+less dependent on backend archaeology.
+
+## Near-Term Consequence
+
+The next roadmap should optimize for a narrow trusted subset, not broad Nix
+coverage.
+
+The project should first make a small set of schemas, build plans, policies,
+artifacts, and interop checks precise enough that Leanix can say exactly what
+it knows, what Rust verified, what Nix witnessed, and where reasoning becomes
+weaker.
+
+That is the path from "typed flakes" toward agent-legible operating-system
+control.
