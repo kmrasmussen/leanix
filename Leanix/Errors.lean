@@ -12,6 +12,8 @@ inductive ValidateError where
   | duplicateEnvNames : (system : System) -> (owner : String) -> ValidateError
   | packageEnvUnsupportedBuild : (system : System) -> (packageName : String) -> ValidateError
   | duplicateBuildPlanArguments : (owner : String) -> ValidateError
+  | buildPlanInvalidPath : (owner : String) -> (field : String) -> (path : String) ->
+      (reason : String) -> ValidateError
   | rawEscapeRejected : (policy : EscapePolicy) -> (owner : String) -> (escape : String) -> ValidateError
   deriving Repr, BEq
 
@@ -33,6 +35,8 @@ def ValidateError.toString : ValidateError -> String
       s!"package {packageName} for {system.toNixString} can only set env vars on runCommand or runSteps builders"
   | .duplicateBuildPlanArguments owner =>
       s!"duplicate build plan arguments for {owner}"
+  | .buildPlanInvalidPath owner field path reason =>
+      s!"{owner} {field} path {path} is invalid: {reason}"
   | .rawEscapeRejected policy owner escape =>
       s!"{policy.toString} policy rejects raw escape hatch in {owner}: {escape}"
 

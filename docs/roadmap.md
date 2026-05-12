@@ -53,6 +53,8 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   exposes package/input references before lowering.
 - 🟡 Model build plans separately from realized store paths: plans lower to the
   existing Nix-shaped `BuildExpr` backend in the first slice.
+- ✅ Build-plan path validation rejects empty paths, parent traversal, absolute
+  host paths, and output destinations outside `$out`.
 - ✅ Validation returns structured `ValidateError` and `SchemaError` values.
 - ✅ Proof-carrying artifacts record pinned input evidence or lockfile witness
   metadata, and strict artifact policy rejects raw check/build-script escape

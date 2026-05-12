@@ -215,6 +215,12 @@ expression. `BuildPlan.installTextFile` can also carry typed `BuildText`, so
 package and input references inside planned file content are visible to
 validation.
 
+Build-plan path validation is deliberately conservative. Source-like relative
+paths, executable paths, and staging destinations must be non-empty, relative,
+and free of `..` segments. Output destinations must be `$out` or live under
+`$out/`. This catches common authoring mistakes before rendering, but it is not
+a filesystem security model or a full path-normalization library.
+
 `BuildExpr` remains the current Nix backend representation. Rendering still
 works from `BuildExpr`, and `Package.fromBuildPlan` is the migration bridge from
 typed plans to today's renderer.
@@ -303,6 +309,8 @@ behavior of external programs that typed commands invoke.
 - `leanix render-invalid-build-plan-input-ref --out FILE`
 - `leanix render-invalid-build-plan-run-executable-ref --out FILE`
 - `leanix render-invalid-lean-package-input-ref --out FILE`
+- `leanix render-invalid-build-plan-parent-path --out FILE`
+- `leanix render-invalid-build-plan-absolute-destination --out FILE`
 - `leanix render-invalid-missing-ref --out FILE`
 - `leanix render-invalid-cycle --out FILE`
 - `leanix render-invalid-source-missing-hash --out FILE`

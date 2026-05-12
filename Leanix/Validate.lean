@@ -52,6 +52,74 @@ def validateBuildPlanPackageRefs (system : System) (packageNames : List String) 
   for packageName in plan.packageRefs do
     validatePackageRef system packageNames owner packageName
 
+def splitPathSegmentsAux : List Char -> List Char -> List String -> List String
+  | [], current, parts => (String.ofList current.reverse :: parts).reverse
+  | '/' :: rest, current, parts =>
+      splitPathSegmentsAux rest [] (String.ofList current.reverse :: parts)
+  | c :: rest, current, parts =>
+      splitPathSegmentsAux rest (c :: current) parts
+
+def splitPathSegments (path : String) : List String :=
+  splitPathSegmentsAux path.toList [] []
+
+def hasParentPathSegment (path : String) : Bool :=
+  (splitPathSegments path).contains ".."
+
+def startsWithChars : List Char -> List Char -> Bool
+  | [], _ => true
+  | _ :: _, [] => false
+  | expected :: expectedRest, actual :: actualRest =>
+      expected == actual && startsWithChars expectedRest actualRest
+
+def startsWithString (pfx value : String) : Bool :=
+  startsWithChars pfx.toList value.toList
+
+def isAbsolutePath (path : String) : Bool :=
+  startsWithString "/" path
+
+def validateBuildPlanPathBase (owner field path : String) : Except ValidateError Unit := do
+  if path == "" then
+    throw (.buildPlanInvalidPath owner field "<empty>" "empty paths are not allowed")
+  else if hasParentPathSegment path then
+    throw (.buildPlanInvalidPath owner field path "parent traversal is not allowed")
+  else if isAbsolutePath path then
+    throw (.buildPlanInvalidPath owner field path "absolute host paths are not allowed")
+  else
+    pure ()
+
+def validateBuildPlanOutputDestination (owner field path : String) :
+    Except ValidateError Unit := do
+  validateBuildPlanPathBase owner field path
+  if path == "$out" || startsWithString "$out/" path then
+    pure ()
+  else
+    throw (.buildPlanInvalidPath owner field path "output destinations must stay under $out")
+
+def validateBuildPlanRelativePath (owner field path : String) : Except ValidateError Unit := do
+  validateBuildPlanPathBase owner field path
+  if startsWithString "$out" path then
+    throw (.buildPlanInvalidPath owner field path "relative paths must not start with $out")
+  else
+    pure ()
+
+def validateBuildPlanPaths (owner : String) (plan : BuildPlan) : Except ValidateError Unit := do
+  match plan with
+  | .nixpkgsPackage _ => pure ()
+  | .executableTextWrapper args => do
+      validateBuildPlanRelativePath owner "executablePath" args.executablePath
+      validateBuildPlanOutputDestination owner "destination" args.destination
+  | .copyInputTree args =>
+      validateBuildPlanOutputDestination owner "destination" args.destination
+  | .copyInputFile args => do
+      validateBuildPlanRelativePath owner "sourcePath" args.sourcePath
+      validateBuildPlanOutputDestination owner "destination" args.destination
+  | .installTextFile args =>
+      validateBuildPlanOutputDestination owner "destination" args.destination
+  | .runPackageExecutableToOutput args =>
+      validateBuildPlanRelativePath owner "executable" args.executable
+  | .leanPackageFromInputTree args =>
+      validateBuildPlanRelativePath owner "sourceDestination" args.sourceDestination
+
 def validateBuildPlanArguments (owner : String) (plan : BuildPlan) :
     Except ValidateError Unit := do
   match plan with
@@ -70,6 +138,7 @@ def validateBuildPlanArguments (owner : String) (plan : BuildPlan) :
 def validateBuildPlanRefs (system : System) (inputNames packageNames : List String)
     (owner : String) (plan : BuildPlan) : Except ValidateError Unit := do
   validateBuildPlanArguments owner plan
+  validateBuildPlanPaths owner plan
   validateBuildPlanInputRefs inputNames plan
   validateBuildPlanPackageRefs system packageNames owner plan
 

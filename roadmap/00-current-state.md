@@ -52,6 +52,8 @@ Implemented:
 - build expression package references resolve
 - typed build text package/input references resolve
 - build plan package/input references resolve before lowering
+- build plan paths reject empty paths, parent traversal, absolute host paths,
+  and output destinations outside `$out`
 - duplicate wrapper arguments are rejected at the build-plan layer
 - check command package/input references resolve
 - formatter package references resolve

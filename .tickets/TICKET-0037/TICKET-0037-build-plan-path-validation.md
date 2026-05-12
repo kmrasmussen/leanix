@@ -50,4 +50,25 @@ destinations.
 - `blog/yyyy-mm-dd-hh-mm-build-plan-path-validation.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+- Add conservative path validation to `validateBuildPlanRefs`.
+- Reject empty paths, parent traversal segments, absolute host paths, and output
+  destinations outside `$out`.
+- Add invalid examples and exact-stderr e2e cases for parent traversal and
+  absolute output destinations.
+- Document the authoring-validation boundary.
+
+## Result
+- Added `ValidateError.buildPlanInvalidPath`.
+- Added build-plan path helpers for relative paths and output destinations.
+- Path validation now runs before input/package reference validation during
+  `validateBuildPlanRefs`.
+- Added `render-invalid-build-plan-parent-path` and
+  `render-invalid-build-plan-absolute-destination`.
+- Added exact stderr coverage in the Rust e2e harness.
+
+## Verification Result
+- `nix develop --command lake build`
+- `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

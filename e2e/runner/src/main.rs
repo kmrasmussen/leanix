@@ -1197,6 +1197,18 @@ fn main() -> Result<(), String> {
             expected_stderr: "error: build expression refers to missing input missingLeanSrc",
         },
         InvalidCase {
+            name: "build plan parent traversal path",
+            render_arg: "render-invalid-build-plan-parent-path",
+            expected_stderr:
+                "error: build plan parentTraversalCopy sourcePath path ../secret.txt is invalid: parent traversal is not allowed",
+        },
+        InvalidCase {
+            name: "build plan absolute output destination",
+            render_arg: "render-invalid-build-plan-absolute-destination",
+            expected_stderr:
+                "error: build plan absoluteDestination destination path /tmp/message.txt is invalid: absolute host paths are not allowed",
+        },
+        InvalidCase {
             name: "duplicate package env",
             render_arg: "render-invalid-duplicate-package-env",
             expected_stderr:

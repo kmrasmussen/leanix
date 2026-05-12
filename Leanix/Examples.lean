@@ -500,6 +500,67 @@ def missingLeanPackageInputPlanFlake : Except String ValidatedFlake := do
         [("nixpkgs", nixpkgsInput)] project
   | .error error => throw error.toString
 
+def parentTraversalBuildPlan : BuildPlan :=
+  .copyInputFile {
+    derivationName := "parent-traversal-copy"
+    inputName := "fixtureSrc"
+    sourcePath := "../secret.txt"
+    destination := "$out/secret.txt"
+  }
+
+def parentTraversalBuildPlanFlake : Except String ValidatedFlake := do
+  match validateBuildPlanRefs .x86_64_linux ["fixtureSrc"] ["parentTraversalCopy"]
+      "build plan parentTraversalCopy" parentTraversalBuildPlan with
+  | .ok _ =>
+      let package : Package .x86_64_linux :=
+        Package.fromBuildPlan "parentTraversalCopy" parentTraversalBuildPlan
+      let outputs : Outputs := {
+        packages
+          | .x86_64_linux => [package]
+          | _ => []
+        apps := fun _ => []
+        devShells := fun _ => []
+        checks := fun _ => []
+      }
+      match Flake.validateChecked {
+        description := "Leanix invalid parent traversal build plan example"
+        inputs := [("nixpkgs", nixpkgsInput), ("fixtureSrc", hashedSourceInput "path:../e2e/source-fixture")]
+        outputs := outputs
+      } with
+      | .ok validated => pure validated
+      | .error error => throw error.toString
+  | .error error => throw error.toString
+
+def absoluteDestinationBuildPlan : BuildPlan :=
+  .installTextFile {
+    derivationName := "absolute-destination"
+    destination := "/tmp/message.txt"
+    content := .literal "not under out\n"
+  }
+
+def absoluteDestinationBuildPlanFlake : Except String ValidatedFlake := do
+  match validateBuildPlanRefs .x86_64_linux [] ["absoluteDestination"]
+      "build plan absoluteDestination" absoluteDestinationBuildPlan with
+  | .ok _ =>
+      let package : Package .x86_64_linux :=
+        Package.fromBuildPlan "absoluteDestination" absoluteDestinationBuildPlan
+      let outputs : Outputs := {
+        packages
+          | .x86_64_linux => [package]
+          | _ => []
+        apps := fun _ => []
+        devShells := fun _ => []
+        checks := fun _ => []
+      }
+      match Flake.validateChecked {
+        description := "Leanix invalid absolute destination build plan example"
+        inputs := [("nixpkgs", nixpkgsInput)]
+        outputs := outputs
+      } with
+      | .ok validated => pure validated
+      | .error error => throw error.toString
+  | .error error => throw error.toString
+
 def missingInputBuildPlan : BuildPlan :=
   .copyInputFile {
     derivationName := "missing-input-copy"
