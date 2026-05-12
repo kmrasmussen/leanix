@@ -155,30 +155,235 @@ fn compare_file(repo: &Path, actual: &str, expected: &str) -> Result<(), String>
     }
 }
 
-fn expect_verify_artifact_failure(
-    repo: &Path,
-    artifact_dir: &str,
-    expected_stderr: &str,
-) -> Result<(), String> {
-    let output = Command::new("lake")
-        .args(["exe", "leanix", "verify-artifact", artifact_dir])
-        .current_dir(repo)
-        .stdin(Stdio::null())
-        .output()
-        .map_err(|err| format!("failed to start lake: {err}"))?;
+fn trim_json_line(value: &str) -> &str {
+    value.trim_matches(|char| char == ' ' || char == '\t' || char == '\r')
+}
 
-    if output.status.success() {
-        return Err(format!("{artifact_dir} unexpectedly verified"));
+fn drop_trailing_comma(value: &str) -> &str {
+    value.strip_suffix(',').unwrap_or(value)
+}
+
+fn parse_simple_json_string(value: &str) -> Option<String> {
+    let value = value.trim();
+    let body = value.strip_prefix('"')?.strip_suffix('"')?;
+    Some(
+        body.replace("\\\"", "\"")
+            .replace("\\\\", "\\")
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t"),
+    )
+}
+
+fn extract_json_string_field(text: &str, field: &str) -> Result<String, String> {
+    let prefix = format!("\"{field}\": ");
+    for line in text.lines() {
+        let trimmed = trim_json_line(line);
+        if let Some(value) = trimmed.strip_prefix(&prefix) {
+            return parse_simple_json_string(drop_trailing_comma(value))
+                .ok_or_else(|| format!("manifest field {field} is missing or malformed"));
+        }
+    }
+    Err(format!("manifest field {field} is missing or malformed"))
+}
+
+fn extract_string_array(manifest: &str, field: &str) -> Result<Vec<String>, String> {
+    let start = format!("\"{field}\": [");
+    let empty = format!("\"{field}\": []");
+    let mut in_array = false;
+    let mut values = Vec::new();
+
+    for line in manifest.lines() {
+        let trimmed = trim_json_line(line);
+        if !in_array {
+            if trimmed == empty {
+                return Ok(values);
+            }
+            if trimmed == start {
+                in_array = true;
+            }
+            continue;
+        }
+
+        if trimmed == "]" || trimmed == "]," {
+            return Ok(values);
+        }
+
+        let value = drop_trailing_comma(trimmed);
+        match parse_simple_json_string(value) {
+            Some(value) => values.push(value),
+            None => return Err(format!("manifest field {field} is missing or malformed")),
+        }
     }
 
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let actual = stderr.trim();
-    if actual == expected_stderr {
+    Err(format!("manifest field {field} is missing or malformed"))
+}
+
+fn extract_object_array(manifest: &str, field: &str) -> Result<Vec<String>, String> {
+    let start = format!("\"{field}\": [");
+    let empty = format!("\"{field}\": []");
+    let mut in_array = false;
+    let mut in_object = false;
+    let mut current = Vec::new();
+    let mut objects = Vec::new();
+
+    for line in manifest.lines() {
+        let trimmed = trim_json_line(line);
+        if !in_array {
+            if trimmed == empty {
+                return Ok(objects);
+            }
+            if trimmed == start {
+                in_array = true;
+            }
+            continue;
+        }
+
+        if !in_object && (trimmed == "]" || trimmed == "],") {
+            return Ok(objects);
+        }
+
+        if trimmed == "{" {
+            in_object = true;
+            current.clear();
+            continue;
+        }
+
+        if in_object && (trimmed == "}" || trimmed == "},") {
+            objects.push(current.join("\n"));
+            in_object = false;
+            current.clear();
+            continue;
+        }
+
+        if in_object {
+            current.push(trimmed.to_string());
+        }
+    }
+
+    Err(format!("manifest field {field} is missing or malformed"))
+}
+
+fn parse_hash_entry(entry: &str) -> Result<(&str, &str), String> {
+    entry
+        .split_once(' ')
+        .ok_or_else(|| format!("manifest file hash entry is malformed: {entry}"))
+}
+
+fn content_hash(value: &str) -> String {
+    let mut state = 2_166_136_261u64;
+    for char in value.chars() {
+        state = (state * 16_777_619 + u64::from(char as u32)) % 4_294_967_296;
+    }
+    format!("leanix-fnv1a32-{state}")
+}
+
+fn verify_artifact_input_policy(manifest: &str) -> Result<(), String> {
+    for input in extract_object_array(manifest, "inputs")? {
+        let trust_class = extract_json_string_field(&input, "trustClass")?;
+        match trust_class.as_str() {
+            "floating-flake-input" => {
+                return Err(
+                    "artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness"
+                        .to_string(),
+                );
+            }
+            "lockfile-backed-flake-input" => {
+                for field in ["lockfile", "lockfileNode", "lockedRev", "lockedNarHash"] {
+                    extract_json_string_field(&input, field).map_err(|_| {
+                        "artifact input policy rejected: lockfile-backed flake inputs require lockfile witness metadata"
+                            .to_string()
+                    })?;
+                }
+            }
+            "pinned-flake-input" => {
+                for field in ["rev", "narHash"] {
+                    extract_json_string_field(&input, field).map_err(|_| {
+                        "artifact input policy rejected: pinned flake inputs require rev and narHash"
+                            .to_string()
+                    })?;
+                }
+            }
+            "fixed-output-source" => {
+                extract_json_string_field(&input, "narHash").map_err(|_| {
+                    "artifact input policy rejected: fixed-output sources require narHash"
+                        .to_string()
+                })?;
+            }
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+fn verify_artifact_escape_policy(manifest: &str) -> Result<(), String> {
+    let escape_policy = extract_json_string_field(manifest, "escapePolicy")?;
+    if escape_policy == "strict-artifact" {
         Ok(())
     } else {
         Err(format!(
-            "artifact verifier stderr mismatch\nexpected: {expected_stderr}\nactual: {actual}"
+            "artifact escape policy rejected: expected strict-artifact, got {escape_policy}"
         ))
+    }
+}
+
+fn verify_artifact_with_rust(repo: &Path, artifact_dir: &str) -> Result<(), String> {
+    let dir = repo.join(artifact_dir);
+    let manifest_path = dir.join("leanix.manifest.json");
+    let manifest = fs::read_to_string(&manifest_path)
+        .map_err(|err| format!("failed reading {}: {err}", manifest_path.display()))?;
+
+    verify_artifact_escape_policy(&manifest)?;
+    verify_artifact_input_policy(&manifest)?;
+
+    let generated_files = extract_string_array(&manifest, "generatedFiles")?;
+    for file in generated_files {
+        let path = dir.join(&file);
+        if !path.is_file() {
+            return Err(format!("generated file missing: {file}"));
+        }
+    }
+
+    let file_hashes = extract_string_array(&manifest, "fileHashes")?;
+    for entry in file_hashes {
+        let (file, expected_hash) = parse_hash_entry(&entry)?;
+        let path = dir.join(file);
+        let content =
+            fs::read_to_string(&path).map_err(|_| format!("generated file missing: {file}"))?;
+        let actual_hash = content_hash(&content);
+        if actual_hash != expected_hash {
+            return Err(format!("artifact file hash mismatch: {file}"));
+        }
+    }
+
+    let replay_commands = extract_string_array(&manifest, "replayCommands")?;
+    if replay_commands.is_empty() {
+        return Err("manifest replayCommands must not be empty".to_string());
+    }
+    if replay_commands
+        .iter()
+        .any(|command| command.trim().is_empty())
+    {
+        return Err("manifest replayCommands contains an empty command".to_string());
+    }
+
+    Ok(())
+}
+
+fn expect_rust_artifact_verifier_failure(
+    repo: &Path,
+    artifact_dir: &str,
+    expected_error: &str,
+) -> Result<(), String> {
+    match verify_artifact_with_rust(repo, artifact_dir) {
+        Ok(()) => Err(format!(
+            "Rust artifact verifier unexpectedly accepted {artifact_dir}"
+        )),
+        Err(actual) if actual == expected_error => Ok(()),
+        Err(actual) => Err(format!(
+            "Rust artifact verifier error mismatch\nexpected: {expected_error}\nactual: {actual}"
+        )),
     }
 }
 
@@ -200,6 +405,8 @@ fn run_artifact_case(repo: &Path) -> Result<(), String> {
         "generated/showcase-artifact/leanix.manifest.json",
         "examples/proof-carrying-cli-closure/artifact/leanix.manifest.json",
     )?;
+    verify_artifact_with_rust(repo, artifact_dir)?;
+    verify_artifact_with_rust(repo, "examples/proof-carrying-cli-closure/artifact")?;
     run(
         repo,
         "lake",
@@ -240,10 +447,10 @@ fn run_artifact_case(repo: &Path) -> Result<(), String> {
     tampered_flake.push_str("\n# tampered\n");
     fs::write(&tampered_flake_path, tampered_flake)
         .map_err(|err| format!("failed writing {}: {err}", tampered_flake_path.display()))?;
-    expect_verify_artifact_failure(
+    expect_rust_artifact_verifier_failure(
         repo,
         tampered_artifact_dir,
-        "error: artifact file hash mismatch: flake.nix",
+        "artifact file hash mismatch: flake.nix",
     )?;
 
     let missing_file_artifact_dir = "generated/missing-file-artifact";
@@ -262,10 +469,10 @@ fn run_artifact_case(repo: &Path) -> Result<(), String> {
     let missing_flake_path = repo.join(missing_file_artifact_dir).join("flake.nix");
     fs::remove_file(&missing_flake_path)
         .map_err(|err| format!("failed removing {}: {err}", missing_flake_path.display()))?;
-    expect_verify_artifact_failure(
+    expect_rust_artifact_verifier_failure(
         repo,
         missing_file_artifact_dir,
-        "error: generated file missing: flake.nix",
+        "generated file missing: flake.nix",
     )?;
     Ok(())
 }
@@ -294,10 +501,40 @@ fn run_artifact_policy_rejection_case(repo: &Path) -> Result<(), String> {
     fs::write(&manifest_path, manifest)
         .map_err(|err| format!("failed writing {}: {err}", manifest_path.display()))?;
 
-    expect_verify_artifact_failure(
+    expect_rust_artifact_verifier_failure(
         repo,
         artifact_dir,
-        "error: artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness",
+        "artifact input policy rejected: floating flake inputs require a pinned ref or lockfile witness",
+    )?;
+
+    let escape_policy_artifact_dir = "generated/development-policy-artifact";
+    eprintln!("case: artifact escape policy rejection");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "emit-artifact",
+            "--out",
+            escape_policy_artifact_dir,
+        ],
+    )?;
+    let manifest_path = repo
+        .join(escape_policy_artifact_dir)
+        .join("leanix.manifest.json");
+    let manifest = fs::read_to_string(&manifest_path)
+        .map_err(|err| format!("failed reading {}: {err}", manifest_path.display()))?;
+    let manifest = manifest.replace(
+        "\"escapePolicy\": \"strict-artifact\"",
+        "\"escapePolicy\": \"development\"",
+    );
+    fs::write(&manifest_path, manifest)
+        .map_err(|err| format!("failed writing {}: {err}", manifest_path.display()))?;
+    expect_rust_artifact_verifier_failure(
+        repo,
+        escape_policy_artifact_dir,
+        "artifact escape policy rejected: expected strict-artifact, got development",
     )
 }
 
@@ -328,6 +565,7 @@ fn run_artifact_lockfile_witness_case(repo: &Path) -> Result<(), String> {
         .map_err(|err| format!("failed reading {}: {err}", manifest_path.display()))?;
     fs::write(&manifest_path, lockfile_witness_manifest(&manifest))
         .map_err(|err| format!("failed writing {}: {err}", manifest_path.display()))?;
+    verify_artifact_with_rust(repo, artifact_dir)?;
     run(
         repo,
         "lake",
@@ -363,10 +601,10 @@ fn run_artifact_lockfile_witness_case(repo: &Path) -> Result<(), String> {
         );
     fs::write(&missing_manifest_path, missing_manifest)
         .map_err(|err| format!("failed writing {}: {err}", missing_manifest_path.display()))?;
-    expect_verify_artifact_failure(
+    expect_rust_artifact_verifier_failure(
         repo,
         missing_witness_artifact_dir,
-        "error: artifact input policy rejected: lockfile-backed flake inputs require lockfile witness metadata",
+        "artifact input policy rejected: lockfile-backed flake inputs require lockfile witness metadata",
     )
 }
 

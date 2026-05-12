@@ -176,20 +176,21 @@ checks schema invariants, package closure, finite acyclicity, source trust
 requirements, and graph validation before emitting the artifact. The checked
 flake carries the validation witness to the render boundary.
 
-`leanix verify-artifact DIR` now has a generic manifest-driven preflight before
-the remaining showcase checks. It reads `generatedFiles`, verifies that each
-declared file exists, reads `fileHashes`, and rejects tampered files with
-mismatched content hashes. The current hash is a Leanix-local content hash for
-tamper detection, not a cryptographic signature scheme.
+The authoritative generic artifact preflight now lives in the Rust e2e harness.
+It reads `generatedFiles`, verifies that each declared file exists, reads
+`fileHashes`, rejects tampered files with mismatched content hashes, checks that
+replay commands are present, verifies strict artifact escape policy, and checks
+input trust policy including pinned refs and lockfile witnesses. The current
+hash is a Leanix-local content hash for tamper detection, not a cryptographic
+signature scheme.
 
-After that generic preflight, the verifier still checks the current showcase
-contract: expected systems, packages, app/check references, default package
-alias, invariant names, input trust class, source elaboration, and
-`nix flake check path:.` replay. The Rust e2e harness calls that same verifier
-path, including tampered, missing-file, floating-input, accepted lockfile
-witness, and missing-witness rejection cases. Nix remains the external witness
-for evaluating and building the rendered flake; Leanix does not claim to prove
-Nix evaluation.
+`leanix verify-artifact DIR` remains as a compatibility/showcase verifier. It
+still checks the current showcase contract: expected systems, packages,
+app/check references, default package alias, invariant names, input trust class,
+source elaboration, and `nix flake check path:.` replay. The Rust e2e harness
+checks both the Rust generic preflight and the Lean compatibility path for the
+showcase artifact. Nix remains the external witness for evaluating and building
+the rendered flake; Leanix does not claim to prove Nix evaluation.
 
 ## Builder Boundary
 

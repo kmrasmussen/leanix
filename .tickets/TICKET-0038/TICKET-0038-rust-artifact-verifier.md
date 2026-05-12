@@ -52,4 +52,32 @@ Lean-emitted artifact format.
 - `blog/yyyy-mm-dd-hh-mm-rust-artifact-verifier.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+- Add a Rust-owned generic verifier path in the e2e runner.
+- Parse the manifest structure Leanix emits without adding external crates.
+- Verify generated files, file hashes, replay command metadata, input policy,
+  and strict escape policy from manifest data.
+- Keep `leanix verify-artifact` working as the showcase compatibility verifier.
+- Preserve success, tamper, missing-file, input-policy, and lockfile-witness
+  e2e coverage.
+
+## Result
+- Added `verify_artifact_with_rust` in `e2e/runner/src/main.rs`.
+- The Rust verifier checks:
+  - `generatedFiles` existence
+  - `fileHashes` against the Leanix content hash
+  - non-empty `replayCommands`
+  - strict artifact escape policy
+  - pinned, floating, fixed-output, and lockfile-backed input policy
+- Success verification now covers both emitted and checked-in showcase
+  artifacts.
+- Tamper, missing-file, floating-input, development escape-policy, accepted
+  lockfile witness, and missing-lockfile-witness cases are checked through the
+  Rust verifier.
+- `leanix verify-artifact` remains in use for showcase compatibility/replay.
+
+## Verification Result
+- `nix develop --command lake build`
+- `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

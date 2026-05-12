@@ -113,11 +113,11 @@ rendered `flake.nix` and `leanix.manifest.json` with source reference, checked
 invariants, input trust classes, pin/lockfile evidence, file hashes, active
 escape policy, and replay metadata.
 
-- ✅ `verify-artifact` performs a generic manifest preflight for generated files
-  and file hashes before showcase-specific checks.
+- ✅ Rust e2e owns the generic artifact manifest preflight for generated files,
+  file hashes, replay command metadata, input policy, and escape policy.
+- ✅ `verify-artifact` remains as the showcase compatibility verifier.
 - ✅ e2e covers tampered artifacts, missing generated files, floating input
   rejection, lockfile witness acceptance, and strict raw-check rejection.
-- ⬜ Rust-owned generic artifact verifier.
 - ⬜ Multiple artifact examples beyond the CLI showcase.
 
 ## Operational

@@ -79,20 +79,26 @@ boundary.
 
 ## Artifact Verification
 
-Artifact changes should verify:
+Artifact changes should verify through the Rust-owned generic preflight in the
+e2e harness:
 
 - generated files exist
-- manifest fields match the expected artifact contract
-- pin/trust policy is justified
+- file hashes match manifest declarations
+- replay commands are present
+- pin/trust policy is justified from manifest input data
+- strict artifact escape policy is present
+
+The Lean CLI command `leanix verify-artifact` remains as the showcase
+compatibility verifier. It checks the current showcase contract and replay:
+
+- manifest fields match the expected showcase artifact contract
 - replay commands still work
 - `nix flake check path:.` succeeds inside the artifact directory
 
 Future artifact verifier work should add:
 
-- file hash checks
 - manifest schema version checks
 - generic verification for multiple artifacts
-- tamper fixtures
 
 ## Ticket Completion Checklist
 

@@ -88,4 +88,9 @@ They can be checked directly with:
 nix develop -c lake exe leanix verify-artifact examples/proof-carrying-cli-closure/artifact
 ```
 
+The generic artifact preflight is Rust-owned in the e2e harness. It checks
+manifest-declared generated files, file hashes, replay command metadata, input
+trust policy, and strict artifact escape policy. `leanix verify-artifact`
+remains the compatibility path for the showcase-specific contract and replay.
+
 The generated flake is an artifact. The source of truth is the Lean value.

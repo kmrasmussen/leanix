@@ -16,7 +16,7 @@ The post-`TICKET-0025` roadmap wave was materialized as `TICKET-0026` through
 `TICKET-0033` and is now complete.
 
 The active next roadmap wave is materialized as `TICKET-0034` through
-`TICKET-0044`. `TICKET-0034` through `TICKET-0037` are complete; `TICKET-0038`
+`TICKET-0044`. `TICKET-0034` through `TICKET-0038` are complete; `TICKET-0039`
 through `TICKET-0044` remain ready to pick up as implementation slices.
 
 `TICKET-0045` and `TICKET-0046` track the 2026-05-12 CI regression follow-up:
