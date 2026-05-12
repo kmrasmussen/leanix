@@ -106,6 +106,8 @@ Implemented:
 - Development sources remain non-flake source inputs with trust-boundary
   comments.
 - `emit-artifact` writes `flake.nix` and `leanix.manifest.json`.
+- `emit-service-artifact` writes the second proof-carrying artifact shape from
+  `ServiceProject`.
 - Rust e2e performs the generic manifest preflight for generated files, file
   hashes, replay command metadata, input policy, and escape policy.
 - `verify-artifact` remains as the showcase compatibility verifier.
@@ -121,7 +123,8 @@ Important boundary:
   still parses only the manifest structure Leanix emits today rather than a
   complete JSON model.
 - `verify-artifact` still has showcase-specific checks and should not be
-  mistaken for a general artifact verifier.
+  mistaken for a general artifact verifier. The Rust e2e preflight is the
+  generic path and now covers both showcase and service artifacts.
 
 ## Rust E2E Harness
 

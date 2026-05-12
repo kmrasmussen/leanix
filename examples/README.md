@@ -61,3 +61,15 @@ the plan layer before lowering.
 The closure check now uses a typed `CheckCommand.packageExecutableToOutput`
 instead of raw shell. The source fixture example also uses the structured
 `BuildStep.copyFile` step for its final copy.
+
+## Artifact Variants
+
+`leanix emit-artifact --out generated/showcase-artifact` emits the
+proof-carrying CLI closure artifact. `leanix emit-service-artifact --out
+generated/service-artifact` emits the service-schema artifact. Both write a
+`flake.nix` plus `leanix.manifest.json`, and both are checked by the Rust e2e
+generic artifact preflight.
+
+The service artifact is intentionally not another spelling of the showcase: its
+manifest points at `Leanix/Examples.lean#serviceProject`, records the `health`
+check, and carries `ServiceProject.*` invariant names.

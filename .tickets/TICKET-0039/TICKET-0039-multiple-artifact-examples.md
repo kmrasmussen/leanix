@@ -49,4 +49,23 @@ to the CLI showcase.
 - `blog/yyyy-mm-dd-hh-mm-multiple-artifact-examples.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Add a second strict artifact emitter using an existing non-CLI schema.
+2. Make its manifest differ at the source, output, and checked-invariant level.
+3. Verify both artifact shapes through the Rust generic artifact preflight.
+4. Update docs so the artifact boundary is no longer described as showcase-only.
+
+## Result
+- Added `leanix emit-service-artifact --out DIR`, backed by
+  `ServiceProject.validate` and strict artifact policy.
+- Added a service artifact manifest with `ServiceProject.*` invariant evidence,
+  a `health` check, and service-specific source reference.
+- Extended the Rust e2e artifact case to emit and verify both the showcase and
+  service artifacts with the same generic preflight.
+- Updated PoC, roadmap, examples, and verification strategy docs.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.

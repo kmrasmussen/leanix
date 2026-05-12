@@ -87,6 +87,7 @@ e2e harness:
 - replay commands are present
 - pin/trust policy is justified from manifest input data
 - strict artifact escape policy is present
+- multiple artifact shapes can pass the same generic preflight
 
 The Lean CLI command `leanix verify-artifact` remains as the showcase
 compatibility verifier. It checks the current showcase contract and replay:
@@ -98,7 +99,7 @@ compatibility verifier. It checks the current showcase contract and replay:
 Future artifact verifier work should add:
 
 - manifest schema version checks
-- generic verification for multiple artifacts
+- a public Rust operator command for generic artifact verification
 
 ## Ticket Completion Checklist
 

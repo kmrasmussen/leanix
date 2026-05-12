@@ -428,6 +428,50 @@ fn run_artifact_case(repo: &Path) -> Result<(), String> {
         &["flake", "check", "path:./generated/showcase-artifact"],
     )?;
 
+    let service_artifact_dir = "generated/service-artifact";
+    eprintln!("case: service schema flake artifact");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "emit-service-artifact",
+            "--out",
+            service_artifact_dir,
+        ],
+    )?;
+    verify_artifact_with_rust(repo, service_artifact_dir)?;
+    run(
+        repo,
+        "nix",
+        &["flake", "check", "path:./generated/service-artifact"],
+    )?;
+    let showcase_manifest = fs::read_to_string(
+        repo.join("generated/showcase-artifact")
+            .join("leanix.manifest.json"),
+    )
+    .map_err(|err| format!("failed reading generated showcase manifest: {err}"))?;
+    let service_manifest =
+        fs::read_to_string(repo.join(service_artifact_dir).join("leanix.manifest.json"))
+            .map_err(|err| format!("failed reading generated service manifest: {err}"))?;
+    if service_manifest == showcase_manifest {
+        return Err("service artifact manifest unexpectedly matched showcase manifest".to_string());
+    }
+    for expected in [
+        "\"sourceRef\": \"Leanix/Examples.lean#serviceProject\"",
+        "\"name\": \"health\"",
+        "\"ServiceProject.hasChecks\"",
+        "\"ServiceProject.checksPointAtServicePackage\"",
+    ] {
+        if !service_manifest.contains(expected) {
+            return Err(format!("service artifact manifest missing {expected}"));
+        }
+    }
+    if service_manifest.contains("CliProject.") {
+        return Err("service artifact manifest carried CLI schema invariants".to_string());
+    }
+
     let tampered_artifact_dir = "generated/tampered-artifact";
     eprintln!("case: artifact tamper rejection");
     run(

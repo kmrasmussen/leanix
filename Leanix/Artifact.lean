@@ -226,13 +226,19 @@ def checkArtifact (check : Check system) : ArtifactReference := {
   packageName := check.packageName
 }
 
+def defaultGeneratedArtifactFiles : List String :=
+  ["flake.nix", "leanix.manifest.json"]
+
+def defaultArtifactFileHashes (renderedFlake : String) : List String :=
+  ["flake.nix " ++ contentHash renderedFlake]
+
 def showcaseArtifactManifest (renderedFlake : String) : ArtifactManifest := {
   formatVersion := 1
   rendererVersion := "leanix-poc-1"
   escapePolicy := .strictArtifact
   sourceRef := "examples/proof-carrying-cli-closure/source.lean"
-  generatedFiles := ["flake.nix", "leanix.manifest.json"]
-  fileHashes := ["flake.nix " ++ contentHash renderedFlake]
+  generatedFiles := defaultGeneratedArtifactFiles
+  fileHashes := defaultArtifactFileHashes renderedFlake
   systems := [.x86_64_linux]
   inputs := [("nixpkgs", Examples.pinnedNixpkgsInput)].map inputArtifact
   packages := (Examples.showcaseCliProject.package :: Examples.showcaseCliProject.extraPackages).map packageArtifact
@@ -257,6 +263,40 @@ def showcaseArtifactManifest (renderedFlake : String) : ArtifactManifest := {
   ]
 }
 
+def serviceArtifactManifest (renderedFlake : String) : ArtifactManifest := {
+  formatVersion := 1
+  rendererVersion := "leanix-poc-1"
+  escapePolicy := .strictArtifact
+  sourceRef := "Leanix/Examples.lean#serviceProject"
+  generatedFiles := defaultGeneratedArtifactFiles
+  fileHashes := defaultArtifactFileHashes renderedFlake
+  systems := [.x86_64_linux]
+  inputs := [("nixpkgs", Examples.pinnedNixpkgsInput)].map inputArtifact
+  packages := (Examples.serviceProject.package :: Examples.serviceProject.extraPackages).map packageArtifact
+  apps := [Examples.serviceProject.app].map appArtifact
+  checks := Examples.serviceProject.checks.map checkArtifact
+  checkedInvariants := [
+    "validateFlake.uniqueInputNames",
+    "validateFlake.uniqueOutputNames",
+    "validateFlake.packageReferencesResolve",
+    "PackageClosure.refsResolve",
+    "PackageClosure.acyclicByFuel",
+    "ServiceProject.appIsDefault",
+    "ServiceProject.devShellIsDefault",
+    "ServiceProject.hasChecks",
+    "ServiceProject.appPointsAtServicePackage",
+    "ServiceProject.devShellContainsServicePackage",
+    "ServiceProject.devShellRefsResolve",
+    "ServiceProject.checksResolve",
+    "ServiceProject.checksPointAtServicePackage",
+    "sourceTrust.fetchLikeSourcesRequireHash",
+    "escapePolicy.strictArtifact"
+  ]
+  replayCommands := [
+    "nix flake check path:."
+  ]
+}
+
 def renderShowcaseArtifact : Except String (String × String) := do
   let validatedSchema ←
     match Examples.showcaseValidatedSchema with
@@ -272,6 +312,22 @@ def renderShowcaseArtifact : Except String (String × String) := do
   | .error error => throw error.toString
   let renderedFlake ← renderFlake validatedFlake
   pure (renderedFlake, (showcaseArtifactManifest renderedFlake).toJson)
+
+def renderServiceArtifact : Except String (String × String) := do
+  let validatedSchema ←
+    match Examples.serviceValidatedSchema with
+    | .ok validated => pure validated
+    | .error error => throw error.toString
+  let validatedFlake ←
+    match Flake.fromValidatedSchema "Leanix service schema proof-carrying artifact"
+        [("nixpkgs", Examples.pinnedNixpkgsInput)] validatedSchema with
+    | .ok validatedFlake => pure validatedFlake
+    | .error error => throw error.toString
+  match validateFlakeWithPolicy .strictArtifact validatedFlake.flake with
+  | .ok _ => pure ()
+  | .error error => throw error.toString
+  let renderedFlake ← renderFlake validatedFlake
+  pure (renderedFlake, (serviceArtifactManifest renderedFlake).toJson)
 
 def renderRawCheckArtifact : Except String (String × String) := do
   let validatedFlake ←

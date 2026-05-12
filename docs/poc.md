@@ -160,8 +160,9 @@ The source of truth is the typed Lean value.
 
 ## Proof-Carrying Artifact
 
-`leanix emit-artifact --out DIR` emits the first proof-carrying showcase
-artifact. The directory contains:
+`leanix emit-artifact --out DIR` emits the proof-carrying CLI showcase artifact.
+`leanix emit-service-artifact --out DIR` emits a second artifact shape from the
+`ServiceProject` schema. Each artifact directory contains:
 
 - `flake.nix`, the Nix backend artifact
 - `leanix.manifest.json`, a machine-readable manifest
@@ -171,9 +172,9 @@ reference, generated files, file hashes, systems, inputs, source trust classes,
 pin policies, pin metadata, packages, app/check package references, checked
 invariant names, and replay commands.
 
-The current artifact is proof-carrying in a deliberately narrow sense. Lean
+The current artifacts are proof-carrying in a deliberately narrow sense. Lean
 checks schema invariants, package closure, finite acyclicity, source trust
-requirements, and graph validation before emitting the artifact. The checked
+requirements, and graph validation before emitting each artifact. The checked
 flake carries the validation witness to the render boundary.
 
 The authoritative generic artifact preflight now lives in the Rust e2e harness.
@@ -184,13 +185,18 @@ input trust policy including pinned refs and lockfile witnesses. The current
 hash is a Leanix-local content hash for tamper detection, not a cryptographic
 signature scheme.
 
+The service artifact deliberately has different manifest evidence: its
+`sourceRef` points at `serviceProject`, its check is named `health`, and its
+checked invariant names are `ServiceProject.*` rather than `CliProject.*`.
+
 `leanix verify-artifact DIR` remains as a compatibility/showcase verifier. It
 still checks the current showcase contract: expected systems, packages,
 app/check references, default package alias, invariant names, input trust class,
 source elaboration, and `nix flake check path:.` replay. The Rust e2e harness
-checks both the Rust generic preflight and the Lean compatibility path for the
-showcase artifact. Nix remains the external witness for evaluating and building
-the rendered flake; Leanix does not claim to prove Nix evaluation.
+checks the generic preflight for both the showcase and service artifacts, and
+uses the Lean compatibility path for the showcase artifact. Nix remains the
+external witness for evaluating and building the rendered flake; Leanix does
+not claim to prove Nix evaluation.
 
 ## Builder Boundary
 
@@ -303,6 +309,8 @@ behavior of external programs that typed commands invoke.
 - `leanix render-self --source URL --out FILE` — the self-check flake
 - `leanix emit-artifact --out DIR` — proof-carrying showcase artifact
 - `leanix emit-showcase-artifact --out DIR` — explicit showcase artifact alias
+- `leanix emit-service-artifact --out DIR` — proof-carrying `ServiceProject`
+  artifact
 - `leanix emit-raw-check-artifact --out DIR` — negative strict-policy fixture
 - `leanix verify-artifact DIR` — replay the current showcase artifact contract
 - `leanix render-invalid-cli-schema --out FILE`

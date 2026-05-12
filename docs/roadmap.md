@@ -118,7 +118,8 @@ escape policy, and replay metadata.
 - ✅ `verify-artifact` remains as the showcase compatibility verifier.
 - ✅ e2e covers tampered artifacts, missing generated files, floating input
   rejection, lockfile witness acceptance, and strict raw-check rejection.
-- ⬜ Multiple artifact examples beyond the CLI showcase.
+- ✅ Multiple artifact examples: the CLI showcase artifact and the
+  `ServiceProject` artifact both verify through the Rust generic preflight.
 
 ## Operational
 

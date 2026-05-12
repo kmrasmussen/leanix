@@ -1,7 +1,7 @@
 import Leanix
 
 def usage : String :=
-  "usage:\n  leanix\n  leanix list-examples\n  leanix render NAME --out generated/flake.nix\n  leanix render-example NAME --out generated/flake.nix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-build-plan-text-file --out generated/flake.nix\n  leanix render-build-plan-run-executable --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-formatter-schema --out generated/flake.nix\n  leanix render-library-schema --out generated/flake.nix\n  leanix render-multi-app-schema --out generated/flake.nix\n  leanix render-service-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-escaping --out generated/flake.nix\n  leanix render-multi-system --out generated/flake.nix\n  leanix render-multi-system-schema --out generated/flake.nix\n  leanix render-pinned-inputs --out generated/flake.nix\n  leanix render-hashed-source --source path:/absolute/source --out generated/flake.nix\n  leanix render-env --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix\n  leanix emit-artifact --out generated/showcase-artifact\n  leanix emit-showcase-artifact --out generated/showcase-artifact\n  leanix emit-raw-check-artifact --out generated/raw-check-artifact\n  leanix verify-artifact DIR\n  leanix render-invalid-library-schema --out generated/flake.nix\n  leanix render-invalid-formatter-schema --out generated/flake.nix\n  leanix render-invalid-multi-app-schema --out generated/flake.nix\n  leanix render-invalid-service-schema --out generated/flake.nix\n  leanix render-invalid-build-plan-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-input-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-args --out generated/flake.nix\n  leanix render-invalid-build-plan-run-executable-ref --out generated/flake.nix\n  leanix render-invalid-lean-package-input-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-parent-path --out generated/flake.nix\n  leanix render-invalid-build-plan-absolute-destination --out generated/flake.nix\n  leanix render-invalid-typed-text-ref --out generated/flake.nix\n  leanix render-invalid-typed-check-ref --out generated/flake.nix\n  leanix render-invalid-duplicate-package-env --out generated/flake.nix\n  leanix render-invalid-duplicate-shell-env --out generated/flake.nix\n  leanix render-invalid-unsupported-env-builder --out generated/flake.nix\n  leanix render-invalid-multi-system-schema --out generated/flake.nix\n  leanix render-invalid-source-missing-hash --out generated/flake.nix"
+  "usage:\n  leanix\n  leanix list-examples\n  leanix render NAME --out generated/flake.nix\n  leanix render-example NAME --out generated/flake.nix\n  leanix render-example --out generated/flake.nix\n  leanix render-closure --out generated/flake.nix\n  leanix render-build-plan-text-file --out generated/flake.nix\n  leanix render-build-plan-run-executable --out generated/flake.nix\n  leanix render-cli-schema --out generated/flake.nix\n  leanix render-formatter-schema --out generated/flake.nix\n  leanix render-library-schema --out generated/flake.nix\n  leanix render-multi-app-schema --out generated/flake.nix\n  leanix render-service-schema --out generated/flake.nix\n  leanix render-showcase --out generated/flake.nix\n  leanix render-escaping --out generated/flake.nix\n  leanix render-multi-system --out generated/flake.nix\n  leanix render-multi-system-schema --out generated/flake.nix\n  leanix render-pinned-inputs --out generated/flake.nix\n  leanix render-hashed-source --source path:/absolute/source --out generated/flake.nix\n  leanix render-env --out generated/flake.nix\n  leanix render-self --source path:/absolute/repo --out generated/flake.nix\n  leanix emit-artifact --out generated/showcase-artifact\n  leanix emit-showcase-artifact --out generated/showcase-artifact\n  leanix emit-service-artifact --out generated/service-artifact\n  leanix emit-raw-check-artifact --out generated/raw-check-artifact\n  leanix verify-artifact DIR\n  leanix render-invalid-library-schema --out generated/flake.nix\n  leanix render-invalid-formatter-schema --out generated/flake.nix\n  leanix render-invalid-multi-app-schema --out generated/flake.nix\n  leanix render-invalid-service-schema --out generated/flake.nix\n  leanix render-invalid-build-plan-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-input-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-args --out generated/flake.nix\n  leanix render-invalid-build-plan-run-executable-ref --out generated/flake.nix\n  leanix render-invalid-lean-package-input-ref --out generated/flake.nix\n  leanix render-invalid-build-plan-parent-path --out generated/flake.nix\n  leanix render-invalid-build-plan-absolute-destination --out generated/flake.nix\n  leanix render-invalid-typed-text-ref --out generated/flake.nix\n  leanix render-invalid-typed-check-ref --out generated/flake.nix\n  leanix render-invalid-duplicate-package-env --out generated/flake.nix\n  leanix render-invalid-duplicate-shell-env --out generated/flake.nix\n  leanix render-invalid-unsupported-env-builder --out generated/flake.nix\n  leanix render-invalid-multi-system-schema --out generated/flake.nix\n  leanix render-invalid-source-missing-hash --out generated/flake.nix"
 
 partial def startsWithChars : List Char -> List Char -> Bool
   | [], _ => true
@@ -317,6 +317,18 @@ def emitShowcaseArtifact (outputDir : String) : IO UInt32 := do
       IO.eprintln s!"error: {error}"
       pure 1
 
+def emitServiceArtifact (outputDir : String) : IO UInt32 := do
+  match Leanix.renderServiceArtifact with
+  | .ok (renderedFlake, manifest) =>
+      IO.FS.createDirAll outputDir
+      IO.FS.writeFile (System.FilePath.mk outputDir / "flake.nix") renderedFlake
+      IO.FS.writeFile (System.FilePath.mk outputDir / "leanix.manifest.json") manifest
+      IO.println s!"wrote {outputDir}"
+      pure 0
+  | .error error =>
+      IO.eprintln s!"error: {error}"
+      pure 1
+
 def emitRawCheckArtifact (outputDir : String) : IO UInt32 := do
   match Leanix.renderRawCheckArtifact with
   | .ok (renderedFlake, manifest) =>
@@ -429,6 +441,8 @@ def main (args : List String) : IO UInt32 := do
       emitShowcaseArtifact outputDir
   | ["emit-showcase-artifact", "--out", outputDir] =>
       emitShowcaseArtifact outputDir
+  | ["emit-service-artifact", "--out", outputDir] =>
+      emitServiceArtifact outputDir
   | ["emit-raw-check-artifact", "--out", outputDir] =>
       emitRawCheckArtifact outputDir
   | ["verify-artifact", artifactDir] =>
