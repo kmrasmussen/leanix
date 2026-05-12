@@ -45,4 +45,20 @@ same meaningful checks as `.github/workflows/ci.yml` before push.
 - `.tickets/TICKET-0046/TICKET-0046-local-ci-parity-before-push.md`
 
 ## Progress
-- Ready.
+- Completed.
+
+## Plan
+1. Add a repo-local CI parity command that runs the two required GitHub Actions
+   checks.
+2. Add an opt-in pre-push hook installer that delegates to the same command.
+3. Document the command in the README and verification strategy.
+4. Run the command directly before closing the ticket.
+
+## Result
+- Added `scripts/ci-local` as the single local CI parity command.
+- Added `scripts/install-pre-push-hook` for opt-in local pre-push enforcement.
+- Documented the workflow in `README.md` and
+  `roadmap/05-verification-strategy.md`.
+
+## Verification Result
+- Passed: `scripts/ci-local`.

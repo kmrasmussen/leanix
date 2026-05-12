@@ -115,11 +115,23 @@ For each substantial ticket:
 
 ## CI Direction
 
-CI should eventually mirror the local default gate:
+GitHub Actions and local pre-push checks share the same required gate:
 
-- `lake build`
-- Rust e2e harness
-- optional nixparserlean interop only when the dependency is available
+- `nix flake check`
+- `nix develop -c cargo run --locked --manifest-path e2e/runner/Cargo.toml`
 
-CI should not depend on generated artifacts that are ignored locally unless the
-workflow creates them fresh.
+Run the local parity command before pushing:
+
+```sh
+scripts/ci-local
+```
+
+For local enforcement, install the opt-in Git hook:
+
+```sh
+scripts/install-pre-push-hook
+```
+
+The hook delegates to `scripts/ci-local`, so local pre-push behavior and CI stay
+anchored on one command. CI should not depend on generated artifacts that are
+ignored locally unless the workflow creates them fresh.

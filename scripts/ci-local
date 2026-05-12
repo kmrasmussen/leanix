@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+echo "==> nix flake check"
+nix flake check
+
+echo "==> Rust e2e harness"
+nix develop -c cargo run --locked --manifest-path e2e/runner/Cargo.toml

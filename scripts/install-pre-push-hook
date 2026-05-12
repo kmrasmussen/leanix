@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+hook_path="$repo_root/.git/hooks/pre-push"
+marker="# Leanix local CI pre-push hook"
+
+if [[ -e "$hook_path" ]] && ! grep -Fq "$marker" "$hook_path"; then
+  echo "refusing to overwrite existing pre-push hook: $hook_path" >&2
+  echo "move it aside or merge it with scripts/ci-local manually" >&2
+  exit 1
+fi
+
+cat > "$hook_path" <<'HOOK'
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Leanix local CI pre-push hook
+repo_root="$(git rev-parse --show-toplevel)"
+exec "$repo_root/scripts/ci-local"
+HOOK
+
+chmod +x "$hook_path"
+echo "installed Leanix pre-push hook at $hook_path"

@@ -112,3 +112,15 @@ nix flake check path:./generated
 lake exe leanix render-self --source path:/home/kasper/projects/leanix --out generated/flake.nix
 cargo run --locked --manifest-path e2e/runner/Cargo.toml
 ```
+
+Before pushing, run the same required gate as GitHub Actions:
+
+```sh
+scripts/ci-local
+```
+
+To install an opt-in Git pre-push hook that runs that command:
+
+```sh
+scripts/install-pre-push-hook
+```
