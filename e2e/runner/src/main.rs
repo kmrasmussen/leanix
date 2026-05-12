@@ -1424,6 +1424,72 @@ fn run_registry_case(repo: &Path) -> Result<(), String> {
     }
 }
 
+fn require_summary_fragment(summary: &str, context: &str, fragment: &str) -> Result<(), String> {
+    if summary.contains(fragment) {
+        Ok(())
+    } else {
+        Err(format!("graph summary for {context} missing {fragment}"))
+    }
+}
+
+fn run_graph_summary_case(repo: &Path) -> Result<(), String> {
+    eprintln!("case: agent-legible graph summary");
+
+    let showcase_output = "generated/showcase-summary.json";
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "summarize",
+            "showcase",
+            "--out",
+            showcase_output,
+        ],
+    )?;
+    let showcase_summary = fs::read_to_string(repo.join(showcase_output))
+        .map_err(|err| format!("failed reading {showcase_output}: {err}"))?;
+    for expected in [
+        "\"formatVersion\": 1",
+        "\"summaryKind\": \"experimental-graph-summary\"",
+        "\"derivedFrom\": \"checked-leanix-values\"",
+        "\"escapePolicy\": \"development\"",
+        "\"x86_64-linux\"",
+        "\"trustClass\": \"floating-flake-input\"",
+        "\"name\": \"helloWrapper\"",
+        "\"name\": \"helloTool\"",
+        "\"packageEdges\": [",
+        "\"helloTool\"",
+        "\"program\": \"bin/hello-wrapper\"",
+        "\"commandKind\": \"packageExecutableToOutput\"",
+        "\"commandPackageEdges\": [",
+        "\"rawEscapeHatches\": []",
+        "\"FlakeSchema.Valid\"",
+    ] {
+        require_summary_fragment(&showcase_summary, "showcase", expected)?;
+    }
+
+    let hello_output = "generated/hello-summary.json";
+    run(
+        repo,
+        "lake",
+        &["exe", "leanix", "summarize", "hello", "--out", hello_output],
+    )?;
+    let hello_summary = fs::read_to_string(repo.join(hello_output))
+        .map_err(|err| format!("failed reading {hello_output}: {err}"))?;
+    for expected in [
+        "\"commandKind\": \"rawShell\"",
+        "\"rawEscapeHatches\": [",
+        "\"owner\": \"check hello\"",
+        "\"escape\": \"raw shell command\"",
+    ] {
+        require_summary_fragment(&hello_summary, "hello", expected)?;
+    }
+
+    Ok(())
+}
+
 fn run_selected_cases(repo: &Path, cases: &[Case], selected: &[String]) -> Result<(), String> {
     if selected.is_empty() {
         for case in cases {
@@ -1867,6 +1933,7 @@ fn main() -> Result<(), String> {
     run_artifact_lockfile_witness_case(&repo)?;
     run_source_injection_case(&repo)?;
     run_registry_case(&repo)?;
+    run_graph_summary_case(&repo)?;
     run_build_plan_text_file_case(&repo)?;
     run_build_plan_run_executable_case(&repo)?;
     run_hashed_source_case(&repo)?;

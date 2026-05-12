@@ -72,6 +72,8 @@ Acceptance:
 
 ## TICKET-0048: Agent-Legible Graph Summary
 
+Status: completed.
+
 Problem:
 
 Leanix has checked graph data, but an agent still has to infer much of the

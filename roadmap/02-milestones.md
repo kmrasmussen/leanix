@@ -84,6 +84,8 @@ Time-bound acceptance:
 
 Deadline: 2026-06-02.
 
+Status: completed in `TICKET-0048`.
+
 Specific:
 
 - Add a machine-readable summary for one checked flake or registry example.

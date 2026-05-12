@@ -114,6 +114,19 @@ current named properties are still produced by executable boolean checks; the
 proof strategy and next strengthening step are documented in
 `docs/closure-proof-strategy.md`.
 
+## Agent-Legible Summary
+
+`leanix summarize NAME --out generated/graph-summary.json` emits an
+experimental graph summary from `ValidatedFlake.checkedOutputs`, before Nix is
+rendered. It exposes systems, inputs and source trust classes, package edges,
+apps, dev shells, checks, formatters, policy descriptions, raw escape hatches,
+and carried invariant names.
+
+The maintained summary contract is documented in
+[`docs/graph-summary.md`](graph-summary.md). The summary is the first
+agent-facing view intended to answer graph questions without treating generated
+Nix as the reasoning substrate.
+
 ## Renderer
 
 `Leanix/Render.lean` lowers a `ValidatedFlake` to a generated `flake.nix`.

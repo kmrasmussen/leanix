@@ -1,12 +1,12 @@
 # Current State
 
 This is a snapshot of the project as of 2026-05-12 after the roadmap wave from
-`TICKET-0034` through `TICKET-0044` has landed.
+`TICKET-0034` through `TICKET-0048` has landed.
 
 ## Repository State
 
-- `.tickets/TICKET-0001` through `.tickets/TICKET-0047` are completed.
-- The remaining active agent-legible roadmap wave is `TICKET-0048` through
+- `.tickets/TICKET-0001` through `.tickets/TICKET-0048` are completed.
+- The remaining active agent-legible roadmap wave is `TICKET-0049` through
   `TICKET-0051`.
 - `TICKET-0045` and `TICKET-0046` record CI-regression follow-up work around
   pinned GitHub input rendering and local CI parity.
@@ -102,6 +102,8 @@ Missing or still shallow:
 Implemented:
 
 - `ValidatedFlake` is the renderer boundary.
+- `leanix summarize NAME --out FILE` emits an experimental graph summary from
+  `ValidatedFlake.checkedOutputs`, before generated Nix exists.
 - Generated Nix emits active-system output blocks.
 - Package and app defaults are synthesized where needed.
 - Formatter outputs render as `formatter.${system}`.
@@ -143,6 +145,7 @@ It currently covers:
 - tampered and missing generated-file artifact rejection
 - floating input and lockfile-witness artifact policy cases
 - strict artifact raw-check rejection
+- agent-legible graph summaries for checked registry examples
 - checked per-system output evidence carried on `ValidatedFlake`
 - invalid examples with exact stderr checks
 - CLI example registry listing and generic rendering

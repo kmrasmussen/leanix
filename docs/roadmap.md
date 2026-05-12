@@ -101,6 +101,8 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 - ✅ `EscapePolicy` distinguishes development from strict artifact contexts.
 - ✅ `CheckedSystemOutputs` carries reusable per-system evidence for package
   graph validity plus app, dev-shell, check, and formatter references.
+- ✅ `leanix summarize NAME --out FILE` emits an experimental agent-legible
+  graph summary from checked Leanix values before Nix rendering.
 - ⬜ Prove that successful validation implies renderable output for the
   supported Nix backend subset.
 - ⬜ Prove the topological checker's success means no package dependency cycles.
@@ -124,13 +126,15 @@ escape policy, and replay metadata.
 
 ## Operational
 
-- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0047`
-  are complete, and `TICKET-0048` through `TICKET-0051` are the remaining
+- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0048`
+  are complete, and `TICKET-0049` through `TICKET-0051` are the remaining
   agent-legible roadmap wave.
 - ✅ CI workflow exists in `.github/workflows/ci.yml`.
 - ✅ Source trust modeling is represented by `Input.source`,
   `Input.localDevSource`, and `Input.impureLocalSource`.
 - ✅ CLI example registry exists via `leanix list-examples` and
   `leanix render NAME --out FILE`.
+- ✅ Agent-legible summary registry exists via `leanix summarize NAME --out
+  FILE`.
 - ✅ Focused render-and-check workflow and e2e filters live in the Rust runner
   via `--check-example NAME` and repeated `--only NAME`.

@@ -54,4 +54,26 @@ Emit a machine-readable summary derived from checked Leanix values.
 - `blog/yyyy-mm-dd-hh-mm-agent-legible-graph-summary.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Add an experimental JSON summary rendered from `ValidatedFlake.checkedOutputs`.
+2. Expose inputs, trust classes, systems, output families, package edges,
+   command edges, policies, carried invariants, and raw escape hatches.
+3. Add a CLI command that reuses the existing example registry.
+4. Add Rust e2e coverage for the showcase summary and a raw-shell contrast
+   example.
+5. Document the contract and concrete agent questions.
+
+## Result
+- Added `leanix summarize NAME --out generated/graph-summary.json`.
+- Added `Leanix/GraphSummary.lean` as the summary renderer over checked Leanix
+  values rather than generated Nix.
+- Added Rust e2e checks for the `showcase` graph summary and the `hello` raw
+  escape-hatch summary.
+- Added `docs/graph-summary.md` and linked it from the PoC documentation.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.
+- Passed: `scripts/ci-local`.
