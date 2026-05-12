@@ -34,12 +34,16 @@ Two more elaborate examples build on the same model:
   want default dev-shell and check conventions.
 - `multiAppProject` uses `MultiAppProject` for a single package graph that
   exposes multiple app outputs.
+- `serviceProject` uses `ServiceProject` for daemon-style projects with a
+  default app, default dev shell, and at least one service health check around
+  one main package.
 - `formatterProject` uses `FormatterProject` for flakes that expose the common
   `formatter.${system}` convention as a typed package reference.
 
 Use a schema when the project matches a known convention and Leanix should name
 that convention in validation errors. Use raw `Flake` and `Outputs` values when
-the shape is still experimental or deliberately outside the schema vocabulary.
+the shape is still experimental, needs process supervision or network/runtime
+policy, or is deliberately outside the schema vocabulary.
 
 There is also a `selfFlakeWithSource` example: the CLI renders a flake that
 imports the Leanix repository as a `localDevSource` input, copies it with a
@@ -68,6 +72,9 @@ structured build step, and runs a structured Lean-project build inside
   at the library package.
 - for `MultiAppProject`: at least two app outputs exist, and app, dev-shell,
   and check references resolve inside the same package graph.
+- for `ServiceProject`: the app and dev shell are named `default`; at least one
+  check exists; the app, dev shell, and checks resolve inside the same package
+  graph; and the app/check outputs point at the service package.
 - for `FormatterProject`: the formatter output points at a package in the same
   system package graph.
 
@@ -266,6 +273,8 @@ behavior of external programs that typed commands invoke.
   package-first schema flake
 - `leanix render-multi-app-schema --out FILE` — `MultiAppProject` lowered to a
   multi-app schema flake
+- `leanix render-service-schema --out FILE` — `ServiceProject` lowered through
+  `ValidatedSchema` to a daemon-style schema flake
 - `leanix render-showcase --out FILE` — proof-carrying CLI closure showcase
 - `leanix render-multi-system --out FILE` — graph-level two-system flake
 - `leanix render-multi-system-schema --out FILE` — schema-authored two-system
@@ -279,6 +288,7 @@ behavior of external programs that typed commands invoke.
 - `leanix render-invalid-formatter-schema --out FILE`
 - `leanix render-invalid-library-schema --out FILE`
 - `leanix render-invalid-multi-app-schema --out FILE`
+- `leanix render-invalid-service-schema --out FILE`
 - `leanix render-invalid-multi-system-schema --out FILE`
 - `leanix render-invalid-build-plan-input-ref --out FILE`
 - `leanix render-invalid-missing-ref --out FILE`

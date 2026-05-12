@@ -39,9 +39,10 @@ that the conventional defaults point at the project package.
 The schema layer now covers more than the single default CLI shape. Use
 `LibraryProject` when a package is the main output and the schema should enforce
 default dev-shell/check conventions around it. Use `MultiAppProject` when one
-package graph intentionally exposes several app outputs. Drop to raw `Flake`
-and `Outputs` values when the project shape does not fit one of these
-conventions yet.
+package graph intentionally exposes several app outputs. Use `ServiceProject`
+when one daemon-style package owns the default app plus one or more health
+checks. Drop to raw `Flake` and `Outputs` values when the project shape does
+not fit one of these conventions yet.
 
 Schema validation now has an explicit type boundary. Raw schemas become
 `ValidatedSchema` values before they can be lowered through the validated-schema

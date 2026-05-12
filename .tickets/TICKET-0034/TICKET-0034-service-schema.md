@@ -54,4 +54,27 @@ dev shell, and one or more checks around a daemon command.
 - `blog/yyyy-mm-dd-hh-mm-service-schema.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+- Add `ServiceProject` with a default service app, default dev shell, service
+  package checks, and package-reference validation.
+- Add valid and invalid examples, CLI commands, a golden fixture, and e2e
+  coverage.
+- Document when the service schema fits and when raw `Flake` remains the right
+  boundary.
+- Verify with `lake build` and the Rust e2e harness before marking complete.
+
+## Result
+- Added `ServiceProject` with one service package, optional supporting
+  packages, a default service app, a default dev shell, and one or more checks.
+- The valid service example lowers through `ValidatedSchema` and renders via
+  `render-service-schema`.
+- Added `e2e/golden/service-schema.flake.nix` and Rust e2e coverage for the
+  valid flake, registry entry, and exact invalid stderr.
+- Documented the service/raw-`Flake` boundary in README, PoC docs, examples
+  docs, roadmap notes, and a dated blog entry.
+
+## Verification Result
+- `nix develop --command lake build`
+- `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

@@ -834,7 +834,13 @@ fn run_invalid_case(repo: &Path, case: &InvalidCase) -> Result<(), String> {
 fn run_registry_case(repo: &Path) -> Result<(), String> {
     eprintln!("case: CLI example registry");
     let list = run_capture(repo, "lake", &["exe", "leanix", "list-examples"])?;
-    for expected in ["hello", "showcase", "multi-system-schema", "self"] {
+    for expected in [
+        "hello",
+        "service-schema",
+        "showcase",
+        "multi-system-schema",
+        "self",
+    ] {
         if !list.lines().any(|line| line == expected) {
             return Err(format!("example registry missing {expected}"));
         }
@@ -1048,6 +1054,13 @@ fn main() -> Result<(), String> {
             golden: Some("e2e/golden/multi-app-schema.flake.nix"),
         },
         Case {
+            name: "service schema flake",
+            render_arg: "render-service-schema",
+            source_arg: false,
+            lean_source: None,
+            golden: Some("e2e/golden/service-schema.flake.nix"),
+        },
+        Case {
             name: "proof-carrying CLI closure showcase",
             render_arg: "render-showcase",
             source_arg: false,
@@ -1168,6 +1181,12 @@ fn main() -> Result<(), String> {
             name: "invalid multi-app schema",
             render_arg: "render-invalid-multi-app-schema",
             expected_stderr: "error: MultiAppProject must include at least 2 apps",
+        },
+        InvalidCase {
+            name: "invalid service schema",
+            render_arg: "render-invalid-service-schema",
+            expected_stderr:
+                "error: ServiceProject check health must point at an existing package missingService",
         },
         InvalidCase {
             name: "invalid multi-system schema",

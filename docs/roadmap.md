@@ -31,7 +31,9 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 - ✅ `MultiAppProject` models one package graph exposed through several app
   outputs.
 - ✅ `FormatterProject` models formatter outputs as typed package references.
-- ⬜ Service, package-set, and documentation-oriented schemas.
+- ✅ `ServiceProject` models daemon-style package/app/dev-shell/check
+  conventions.
+- ⬜ Package-set and documentation-oriented schemas.
 - ⬜ Maintained schema catalog reference.
 
 ## Phase 2: Reproducibility Model — 🟡

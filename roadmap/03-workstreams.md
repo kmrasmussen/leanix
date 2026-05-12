@@ -15,13 +15,13 @@ Current assets:
 - `LibraryProject`
 - `MultiAppProject`
 - `FormatterProject`
+- `ServiceProject`
 - `ValidatedSchema`
 - `BuildPlan`
 - `CheckCommand`
 
 Next work:
 
-- service-style schema
 - package-set or data-only schema
 - schema catalog reference
 - schema composition helpers only where repeated patterns justify them

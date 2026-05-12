@@ -1,7 +1,8 @@
 # Current State
 
 This is a snapshot of the project after the completed ticket wave ending at
-commit `86314a7` (`Add CLI example registry`).
+commit `4182005` (`Add next roadmap ticket wave`), plus the current
+`ServiceProject` schema work.
 
 ## Repository State
 
@@ -75,13 +76,14 @@ Implemented:
   and check conventions
 - `MultiAppProject`: one package graph exposed through multiple apps
 - `FormatterProject`: formatter output as a typed package reference
+- `ServiceProject`: daemon-style package, default app, default dev shell, and
+  one or more service checks
 - `ValidatedSchema`: explicit boundary before schema lowering
 - `Flake.fromSchema` and `Flake.fromValidatedSchema`: schema-to-validated-flake
   paths
 
 Missing or still shallow:
 
-- service/daemon schemas
 - documentation or website schemas
 - data-only/package-set schemas
 - schema catalog reference docs with a stable "which schema should I use"
@@ -169,7 +171,7 @@ Next pressure:
 Leanix is now past the first proof of concept. The next version should make the
 system easier to extend and trust:
 
-- service and package-set schemas for common non-CLI shapes
+- package-set schemas for common non-CLI shapes
 - a maintained schema catalog reference
 - build plans as the main package-authoring API for normal examples
 - a Rust-owned generic artifact verifier

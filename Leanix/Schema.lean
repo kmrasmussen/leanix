@@ -353,6 +353,131 @@ instance : FlakeSchema (MultiAppProject system) where
   validate := MultiAppProject.validate
   Valid := MultiAppProject.Valid
 
+structure ServiceProject (system : System) where
+  package : Package system
+  extraPackages : List (Package system) := []
+  app : App system
+  devShell : DevShell system
+  checks : List (Check system)
+  deriving Repr, BEq
+
+def ServiceProject.packages (project : ServiceProject system) : List (Package system) :=
+  [project.package] ++ project.extraPackages
+
+def ServiceProject.devShellRefsResolveBool (project : ServiceProject system) : Bool :=
+  let packageNames := schemaPackageNames project.packages
+  project.devShell.packageNames.all (fun packageName => packageNames.contains packageName)
+
+def ServiceProject.checkRefsResolveBool (project : ServiceProject system) : Bool :=
+  let packageNames := schemaPackageNames project.packages
+  project.checks.all (fun check => packageNames.contains check.packageName)
+
+def ServiceProject.checksPointAtServicePackageBool (project : ServiceProject system) : Bool :=
+  project.checks.all (fun check => check.packageName == project.package.name)
+
+structure ServiceProject.Valid (project : ServiceProject system) : Prop where
+  appIsDefault : project.app.name = "default"
+  devShellIsDefault : project.devShell.name = "default"
+  hasChecks : 1 <= project.checks.length
+  appPointsAtServicePackage : project.app.packageName = project.package.name
+  devShellContainsServicePackage : project.devShell.packageNames.contains project.package.name = true
+  devShellRefsResolve : project.devShellRefsResolveBool = true
+  checksResolve : project.checkRefsResolveBool = true
+  checksPointAtServicePackage : project.checksPointAtServicePackageBool = true
+
+def ServiceProject.validate (project : ServiceProject system) : Except SchemaError Unit := do
+  validateSchemaDefaultName "ServiceProject" "app" project.app.name
+  validateSchemaDefaultName "ServiceProject" "devShell" project.devShell.name
+  validateSchemaMinCount "ServiceProject" "checks" 1 project.checks.length
+  let packageNames := schemaPackageNames project.packages
+  validateSchemaPackageRef "ServiceProject" s!"app {project.app.name}" packageNames
+    project.app.packageName
+  for packageName in project.devShell.packageNames do
+    validateSchemaPackageRef "ServiceProject" s!"devShell {project.devShell.name}" packageNames
+      packageName
+  for check in project.checks do
+    validateSchemaPackageRef "ServiceProject" s!"check {check.name}" packageNames
+      check.packageName
+  if project.app.packageName == project.package.name then
+    pure ()
+  else
+    throw (.schemaMissingPackageRef "ServiceProject" s!"app {project.app.name}"
+      project.package.name)
+  if project.devShell.packageNames.contains project.package.name then
+    pure ()
+  else
+    throw (.schemaMissingPackageRef "ServiceProject" s!"devShell {project.devShell.name}"
+      project.package.name)
+  for check in project.checks do
+    if check.packageName == project.package.name then
+      pure ()
+    else
+      throw (.schemaMissingPackageRef "ServiceProject" s!"check {check.name}"
+        project.package.name)
+
+def ServiceProject.toOutputs : {system : System} -> ServiceProject system -> Outputs
+  | .x86_64_linux, project => {
+      packages
+        | .x86_64_linux => project.packages
+        | _ => []
+      apps
+        | .x86_64_linux => [project.app]
+        | _ => []
+      devShells
+        | .x86_64_linux => [project.devShell]
+        | _ => []
+      checks
+        | .x86_64_linux => project.checks
+        | _ => []
+    }
+  | .aarch64_linux, project => {
+      packages
+        | .aarch64_linux => project.packages
+        | _ => []
+      apps
+        | .aarch64_linux => [project.app]
+        | _ => []
+      devShells
+        | .aarch64_linux => [project.devShell]
+        | _ => []
+      checks
+        | .aarch64_linux => project.checks
+        | _ => []
+    }
+  | .x86_64_darwin, project => {
+      packages
+        | .x86_64_darwin => project.packages
+        | _ => []
+      apps
+        | .x86_64_darwin => [project.app]
+        | _ => []
+      devShells
+        | .x86_64_darwin => [project.devShell]
+        | _ => []
+      checks
+        | .x86_64_darwin => project.checks
+        | _ => []
+    }
+  | .aarch64_darwin, project => {
+      packages
+        | .aarch64_darwin => project.packages
+        | _ => []
+      apps
+        | .aarch64_darwin => [project.app]
+        | _ => []
+      devShells
+        | .aarch64_darwin => [project.devShell]
+        | _ => []
+      checks
+        | .aarch64_darwin => project.checks
+        | _ => []
+    }
+
+instance : FlakeSchema (ServiceProject system) where
+  toOutputs := ServiceProject.toOutputs
+  validate := ServiceProject.validate
+  Valid := ServiceProject.Valid
+
 structure FormatterProject (system : System) where
   packages : List (Package system)
   formatter : Formatter system

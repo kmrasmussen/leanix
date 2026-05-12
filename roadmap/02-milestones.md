@@ -4,8 +4,8 @@ The roadmap is organized as milestones that can become ticket waves. Each
 milestone should be small enough to land with documentation, e2e coverage, a
 blog note, and a commit.
 
-This file reflects the state after `TICKET-0033`. Completed slices remain
-important context, but the next concrete backlog is `TICKET-0034` through
+This file reflects the state after `TICKET-0034`. Completed slices remain
+important context, and the remaining concrete backlog is `TICKET-0035` through
 `TICKET-0044` in `roadmap/04-ticket-wave.md`.
 
 ## Milestone 1: Schema Catalog V2
@@ -16,12 +16,11 @@ schema language.
 Already landed:
 
 - `CliProject`, `MultiSystemCliProject`, `LibraryProject`, `MultiAppProject`,
-  and `FormatterProject`
+  `FormatterProject`, and `ServiceProject`
 - valid examples, invalid e2e cases, and goldens for the current schema set
 
 Next deliverables:
 
-- one service-style app schema or daemon-oriented schema
 - schema catalog reference docs that explain when to use each schema
 - clearer guidance for when raw `Flake` remains the right escape hatch
 - shared schema helper extraction only where repeated conventions justify it

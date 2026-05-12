@@ -25,11 +25,15 @@ systems.
 `leanix render-library-schema --out generated/flake.nix` demonstrates the
 package-first `LibraryProject` schema. `leanix render-multi-app-schema --out
 generated/flake.nix` demonstrates `MultiAppProject`, where several app outputs
-share one package graph. `leanix render-formatter-schema --out
+share one package graph. `leanix render-service-schema --out
+generated/flake.nix` demonstrates `ServiceProject`, where one daemon-style
+package owns the default app and one or more health checks. `leanix
+render-formatter-schema --out
 generated/flake.nix` demonstrates `FormatterProject`, where a formatter output
 is a typed package reference rendered as `formatter.${system}`. Use these
 schemas for known conventions; keep using raw `Flake` values when experimenting
-with output shapes Leanix has not named yet.
+with output shapes Leanix has not named yet or when modeling runtime service
+management beyond package/app/check relationships.
 
 The closure and showcase examples now author `helloWrapper` through
 `helloWrapperPlan`, a `BuildPlan` that lowers to the same generated Nix as the

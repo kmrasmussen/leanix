@@ -706,6 +706,79 @@ def showcaseFlake : Except String ValidatedFlake := do
   | .ok validatedFlake => pure validatedFlake
   | .error error => throw error.toString
 
+def serviceProject : ServiceProject .x86_64_linux where
+  package := helloWrapperPackage
+  extraPackages := [helloToolPackage]
+  app := {
+    name := "default"
+    packageName := "helloWrapper"
+    program := "bin/hello-wrapper"
+  }
+  devShell := {
+    name := "default"
+    packageNames := ["helloWrapper", "helloTool"]
+  }
+  checks := [
+    {
+      name := "health"
+      packageName := "helloWrapper"
+      command := .packageExecutableToOutput {
+        packageName := "helloWrapper"
+        executable := "hello-wrapper"
+      }
+    }
+  ]
+
+def serviceValidatedSchema : Except SchemaError (ValidatedSchema (ServiceProject .x86_64_linux)) := do
+  ServiceProject.validate serviceProject
+  pure {
+    value := serviceProject
+    valid := {
+      appIsDefault := rfl
+      devShellIsDefault := rfl
+      hasChecks := by decide
+      appPointsAtServicePackage := rfl
+      devShellContainsServicePackage := by native_decide
+      devShellRefsResolve := by native_decide
+      checksResolve := by native_decide
+      checksPointAtServicePackage := by native_decide
+    }
+  }
+
+def serviceSchemaFlake : Except String ValidatedFlake := do
+  let validated ←
+    match serviceValidatedSchema with
+    | .ok validated => pure validated
+    | .error error => throw error.toString
+  match Flake.fromValidatedSchema "Leanix service schema example" [("nixpkgs", nixpkgsInput)]
+      validated with
+  | .ok validatedFlake => pure validatedFlake
+  | .error error => throw error.toString
+
+def brokenServiceProject : ServiceProject .x86_64_linux where
+  package := helloWrapperPackage
+  extraPackages := [helloToolPackage]
+  app := {
+    name := "default"
+    packageName := "helloWrapper"
+    program := "bin/hello-wrapper"
+  }
+  devShell := {
+    name := "default"
+    packageNames := ["helloWrapper", "helloTool"]
+  }
+  checks := [
+    {
+      name := "health"
+      packageName := "missingService"
+      command := "touch \"$out\""
+    }
+  ]
+
+def brokenServiceSchemaFlake : Except String ValidatedFlake :=
+  Flake.fromSchema "Leanix invalid service schema example" [("nixpkgs", nixpkgsInput)]
+    brokenServiceProject
+
 def libraryPackage : Package .x86_64_linux where
   name := "helloLib"
   build := .nixpkgs "hello"
