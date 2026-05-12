@@ -1,12 +1,12 @@
 # Current State
 
 This is a snapshot of the project as of 2026-05-12 after the roadmap wave from
-`TICKET-0034` through `TICKET-0050` has landed.
+`TICKET-0034` through `TICKET-0051` has landed.
 
 ## Repository State
 
-- `.tickets/TICKET-0001` through `.tickets/TICKET-0050` are completed.
-- The remaining active agent-legible roadmap wave is `TICKET-0051`.
+- `.tickets/TICKET-0001` through `.tickets/TICKET-0051` are completed.
+- The active agent-legible roadmap wave is complete.
 - `TICKET-0045` and `TICKET-0046` record CI-regression follow-up work around
   pinned GitHub input rendering and local CI parity.
 - Two untracked files exist locally, `flagged.md` and `result`. They are not
@@ -107,6 +107,8 @@ Implemented:
   context, and ordinary hello-family checks use typed command constructors.
 - `docs/generated-nix-contract.md` records the supported generated-Nix backend
   subset and separates Leanix graph claims from Nix witness claims.
+- `docs/nixos-control-plane-sketch.md` records the first host/service design
+  spike for future NixOS-like control-plane work.
 - Generated Nix emits active-system output blocks.
 - Package and app defaults are synthesized where needed.
 - Formatter outputs render as `formatter.${system}`.

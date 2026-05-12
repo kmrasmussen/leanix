@@ -160,6 +160,8 @@ Time-bound acceptance:
 
 Deadline: 2026-06-09.
 
+Status: completed in `TICKET-0051`.
+
 Specific:
 
 - Write a design note for the first Leanix representation that points beyond

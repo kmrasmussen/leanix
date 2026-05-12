@@ -48,4 +48,23 @@ NixOS-like control.
 - `blog/yyyy-mm-dd-hh-mm-nixos-control-plane-design-spike.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Write a design note for one host/service relationship.
+2. Include a typed sketch and a backend-lowering sketch.
+3. List validation and agent questions before backend lowering.
+4. State what remains delegated to NixOS and Nix.
+5. Explicitly defer or name the smallest follow-up implementation slice.
+
+## Result
+- Added `docs/nixos-control-plane-sketch.md`.
+- Added the NixOS control-plane open question to
+  `roadmap/06-open-questions.md`.
+- Explicitly deferred implementation until a tiny `HostService V1` can validate
+  host/service/package/check relationships and emit an agent-legible host
+  summary.
+
+## Verification Result
+- Passed: documentation review against `docs/vision.md` and `roadmap/02-milestones.md`.
+- Passed: `scripts/ci-local`.

@@ -114,3 +114,24 @@ Working stance:
 
 Lean can own pure rendering and simple artifact emission. Rust should own
 subprocess-heavy workflows.
+
+## How Should Leanix Approach NixOS Control?
+
+The first OS-control sketch is documented in
+[`docs/nixos-control-plane-sketch.md`](../docs/nixos-control-plane-sketch.md).
+
+Questions:
+
+- Should the first host/service implementation lower only to flake app/check
+  outputs?
+- Which NixOS concepts are worth modeling before module generation exists?
+- Should host/service summaries share the graph-summary contract or use a
+  separate host-summary contract?
+- How should policy distinguish local workstation experimentation from host
+  artifacts intended for deployment?
+
+Working stance:
+
+Defer implementation until a tiny `HostService V1` can be justified. The first
+slice should validate host/service/package/check relationships and emit an
+agent-legible host summary before any NixOS module backend is attempted.

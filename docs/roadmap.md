@@ -133,9 +133,8 @@ escape policy, and replay metadata.
 
 ## Operational
 
-- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0050`
-  are complete, and `TICKET-0051` is the remaining
-  agent-legible roadmap wave.
+- ✅ Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0051`
+  are complete.
 - ✅ CI workflow exists in `.github/workflows/ci.yml`.
 - ✅ Source trust modeling is represented by `Input.source`,
   `Input.localDevSource`, and `Input.impureLocalSource`.
@@ -145,3 +144,10 @@ escape policy, and replay metadata.
   FILE`.
 - ✅ Focused render-and-check workflow and e2e filters live in the Rust runner
   via `--check-example NAME` and repeated `--only NAME`.
+
+## Future OS Control — 🟡
+
+- ✅ First host/service control-plane design spike in
+  `docs/nixos-control-plane-sketch.md`.
+- ⬜ Implement `HostService V1`.
+- ⬜ Generate NixOS module fragments.

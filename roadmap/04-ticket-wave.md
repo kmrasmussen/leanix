@@ -155,6 +155,8 @@ Acceptance:
 
 ## TICKET-0051: NixOS Control-Plane Design Spike
 
+Status: completed.
+
 Problem:
 
 The long-term vision is OS control, but the current roadmap is still mostly
