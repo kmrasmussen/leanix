@@ -1739,6 +1739,12 @@ fn main() -> Result<(), String> {
             render_arg: "render-invalid-source-missing-hash",
             expected_stderr: "error: source input unhashedSrc must have a narHash",
         },
+        InvalidCase {
+            name: "CI impure local source policy",
+            render_arg: "render-invalid-ci-impure-source",
+            expected_stderr:
+                "error: ci policy rejects input impureSrc: impure local sources are not allowed",
+        },
     ];
 
     run_selected_cases(&repo, &cases, &args.only_cases)?;

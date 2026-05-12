@@ -71,6 +71,7 @@ Good invalid cases:
 - unsupported builder/env combination
 - invalid schema convention
 - floating artifact input under artifact policy
+- impure local source under CI policy
 - duplicate build-plan argument
 - typed check reference failure
 

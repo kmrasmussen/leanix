@@ -59,7 +59,7 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 - ✅ Proof-carrying artifacts record pinned input evidence or lockfile witness
   metadata, and strict artifact policy rejects raw check/build-script escape
   hatches.
-- ⬜ CI policy and impure/local source policy matrix.
+- ✅ CI policy and impure/local source policy matrix.
 
 ## Phase 3: Nix Interop — 🟡
 
@@ -124,9 +124,9 @@ escape policy, and replay metadata.
 
 ## Operational
 
-- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0043`
-  are complete, `TICKET-0044` is the active policy slice, and
-  `roadmap/04-ticket-wave.md` proposes the next agent-legible roadmap wave.
+- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0046`
+  are complete, and `TICKET-0047` through `TICKET-0051` are the active
+  agent-legible roadmap wave.
 - ✅ CI workflow exists in `.github/workflows/ci.yml`.
 - ✅ Source trust modeling is represented by `Input.source`,
   `Input.localDevSource`, and `Input.impureLocalSource`.

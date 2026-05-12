@@ -281,6 +281,7 @@ end
 def rejectRawEscape (policy : EscapePolicy) (owner escape : String) : Except ValidateError Unit := do
   match policy with
   | .development => pure ()
+  | .ci => throw (.rawEscapeRejected policy owner escape)
   | .strictArtifact => throw (.rawEscapeRejected policy owner escape)
 
 mutual
@@ -713,15 +714,43 @@ def validateSystemOutputsWithPolicy (policy : EscapePolicy) (flake : Flake) (sys
 def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateError Unit :=
   validateSystemOutputsWithPolicy .development flake system
 
-def validateInput (name : String) (input : Input) : Except ValidateError Unit := do
+def hasPinnedFlakeEvidence (pin : SourcePin) : Bool :=
+  match pin.rev?, pin.narHash? with
+  | some _, some _ => true
+  | _, _ => false
+
+def validateInputWithPolicy (policy : EscapePolicy) (name : String) (input : Input) :
+    Except ValidateError Unit := do
   match input with
-  | .flake _ => pure ()
-  | .localDevSource _ => pure ()
-  | .impureLocalSource _ => pure ()
+  | .flake pin =>
+      match policy with
+      | .strictArtifact =>
+          if hasPinnedFlakeEvidence pin then
+            pure ()
+          else
+            throw (.inputPolicyRejected policy name "flake inputs require rev and narHash evidence")
+      | .development => pure ()
+      | .ci => pure ()
+  | .localDevSource _ =>
+      match policy with
+      | .strictArtifact =>
+          throw (.inputPolicyRejected policy name "local development sources are not allowed")
+      | .development => pure ()
+      | .ci => pure ()
+  | .impureLocalSource _ =>
+      match policy with
+      | .development => pure ()
+      | .ci =>
+          throw (.inputPolicyRejected policy name "impure local sources are not allowed")
+      | .strictArtifact =>
+          throw (.inputPolicyRejected policy name "impure local sources are not allowed")
   | .source pin =>
       match pin.narHash? with
       | some _ => pure ()
       | none => throw (.sourceInputMissingHash name)
+
+def validateInput (name : String) (input : Input) : Except ValidateError Unit :=
+  validateInputWithPolicy .development name input
 
 def checkFlakeWithPolicy (policy : EscapePolicy) (flake : Flake) :
     Except ValidateError (List AnyCheckedSystemOutputs) := do
@@ -731,7 +760,7 @@ def checkFlakeWithPolicy (policy : EscapePolicy) (flake : Flake) :
     pure ()
 
   for input in flake.inputs do
-    validateInput input.fst input.snd
+    validateInputWithPolicy policy input.fst input.snd
 
   let mut checkedOutputs : List AnyCheckedSystemOutputs := []
   for system in System.all do

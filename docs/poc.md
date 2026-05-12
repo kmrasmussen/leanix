@@ -289,6 +289,13 @@ checks plus raw build-script forms such as `BuildExpr.runCommand`,
 `BuildStep.run`. This reduces the artifact trust surface; it does not prove the
 behavior of external programs that typed commands invoke.
 
+The policy matrix now has three contexts: development, CI, and strict artifact.
+CI is a stricter validation mode for rejecting explicitly impure local sources
+and raw shell escape hatches without changing the ergonomic development render
+path. Strict artifacts additionally reject local development sources and
+floating flake inputs without direct `rev` plus `narHash` evidence. See
+[`docs/policy-matrix.md`](policy-matrix.md).
+
 ## CLI
 
 `lake exe leanix` exposes the PoC commands (`Main.lean`):

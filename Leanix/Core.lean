@@ -46,11 +46,13 @@ inductive Input where
 
 inductive EscapePolicy where
   | development
+  | ci
   | strictArtifact
   deriving Repr, BEq, DecidableEq
 
 def EscapePolicy.toString : EscapePolicy -> String
   | .development => "development"
+  | .ci => "ci"
   | .strictArtifact => "strict-artifact"
 
 inductive BuildText where

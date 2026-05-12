@@ -14,6 +14,8 @@ inductive ValidateError where
   | duplicateBuildPlanArguments : (owner : String) -> ValidateError
   | buildPlanInvalidPath : (owner : String) -> (field : String) -> (path : String) ->
       (reason : String) -> ValidateError
+  | inputPolicyRejected : (policy : EscapePolicy) -> (name : String) ->
+      (reason : String) -> ValidateError
   | rawEscapeRejected : (policy : EscapePolicy) -> (owner : String) -> (escape : String) -> ValidateError
   deriving Repr, BEq
 
@@ -37,6 +39,8 @@ def ValidateError.toString : ValidateError -> String
       s!"duplicate build plan arguments for {owner}"
   | .buildPlanInvalidPath owner field path reason =>
       s!"{owner} {field} path {path} is invalid: {reason}"
+  | .inputPolicyRejected policy name reason =>
+      s!"{policy.toString} policy rejects input {name}: {reason}"
   | .rawEscapeRejected policy owner escape =>
       s!"{policy.toString} policy rejects raw escape hatch in {owner}: {escape}"
 

@@ -1,15 +1,13 @@
 # Current State
 
 This is a snapshot of the project as of 2026-05-12 after the roadmap wave from
-`TICKET-0034` through `TICKET-0043` has effectively landed locally.
-`TICKET-0044` remains the next planned policy-layer implementation slice.
+`TICKET-0034` through `TICKET-0044` has landed.
 
 ## Repository State
 
-- The local checkout has uncommitted work for `TICKET-0043` documentation and
-  Rust e2e filters.
-- `.tickets/TICKET-0001` through `.tickets/TICKET-0044` have materialized
-  ticket-state files; `TICKET-0044` is still open as the next policy slice.
+- `.tickets/TICKET-0001` through `.tickets/TICKET-0046` are completed.
+- The active agent-legible roadmap wave is `TICKET-0047` through
+  `TICKET-0051`.
 - `TICKET-0045` and `TICKET-0046` record CI-regression follow-up work around
   pinned GitHub input rendering and local CI parity.
 - Two untracked files exist locally, `flagged.md` and `result`. They are not
@@ -41,7 +39,7 @@ Implemented:
   Lean package builds from input trees
 - `CheckCommand` as a typed check-command surface with raw shell as an explicit
   escape hatch
-- `EscapePolicy` with development and strict artifact modes
+- `EscapePolicy` with development, CI, and strict artifact modes
 
 ## Implemented Validation
 
@@ -68,6 +66,9 @@ Implemented:
   `PackageClosure.NoFuelBoundedCycles`
 - strict artifact policy rejects raw check commands and raw build-script
   escape hatches before proof-carrying artifact emission
+- CI policy rejects raw escape hatches and explicitly impure local sources
+- strict artifact policy rejects local development sources, impure local
+  sources, and floating flake inputs without direct pin evidence
 
 ## Implemented Schemas
 

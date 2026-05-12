@@ -51,4 +51,29 @@ Define a small policy matrix for development, CI, and strict artifact contexts.
 - `blog/yyyy-mm-dd-hh-mm-policy-matrix-ci-impure-sources.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Add a third policy context for CI while preserving the development render
+   path.
+2. Move input/source checks behind policy-aware validation.
+3. Reject explicitly impure local sources under CI and strict artifact policy.
+4. Keep strict artifact policy rejecting raw escape hatches and add direct
+   strict input checks for local/floating inputs.
+5. Add exact-stderr e2e coverage and document the matrix.
+
+## Result
+- Added `EscapePolicy.ci`.
+- Policy-aware input validation now covers floating flake inputs, local
+  development sources, and impure local sources.
+- CI policy rejects impure local sources and raw escape hatches.
+- Strict artifact policy rejects raw escape hatches, local development sources,
+  impure local sources, and flake inputs without `rev` plus `narHash` evidence.
+- Added `render-invalid-ci-impure-source` and Rust e2e exact-stderr coverage.
+- Added `docs/policy-matrix.md` and linked it from the PoC docs.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command lake exe leanix render-invalid-ci-impure-source --out generated/invalid-flake.nix`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.
+- Passed: `scripts/ci-local`.

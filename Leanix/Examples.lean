@@ -114,6 +114,14 @@ def unhashedSourceFlake : Flake where
   ]
   outputs := helloOutputs
 
+def impureLocalSourceFlake : Flake where
+  description := "Leanix invalid CI impure local source example"
+  inputs := [
+    ("nixpkgs", nixpkgsInput),
+    ("impureSrc", .impureLocalSource "path:/tmp/leanix-impure")
+  ]
+  outputs := helloOutputs
+
 def hashedSourceInput (url : String) : Input :=
   .source {
     url := url
