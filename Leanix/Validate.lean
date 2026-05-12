@@ -398,6 +398,37 @@ def acyclicByFuelBool (packages : List (Package system)) : Bool :=
     (packageDeps package).all fun dep =>
       !(reachesPackageWithFuel packages package.name dep (packages.length + 1))
 
+def depsForName (packages : List (Package system)) (name : String) : List String :=
+  match findPackageByName? packages name with
+  | none => []
+  | some package => packageDeps package
+
+def depsClearedBool (packages : List (Package system)) (remaining : List String)
+    (name : String) : Bool :=
+  (depsForName packages name).all fun dep => !(remaining.contains dep)
+
+def readyNames (packages : List (Package system)) (remaining : List String) : List String :=
+  remaining.filter (depsClearedBool packages remaining)
+
+def removeNames (names toRemove : List String) : List String :=
+  names.filter fun name => !(toRemove.contains name)
+
+def topologicalReduceBool (packages : List (Package system)) :
+    List String -> Nat -> Bool
+  | remaining, 0 => remaining.isEmpty
+  | remaining, fuel + 1 =>
+      if remaining.isEmpty then
+        true
+      else
+        let ready := readyNames packages remaining
+        if ready.isEmpty then
+          false
+        else
+          topologicalReduceBool packages (removeNames remaining ready) fuel
+
+def topologicalAcyclicBool (packages : List (Package system)) : Bool :=
+  topologicalReduceBool packages (packageNames packages) (packages.length + 1)
+
 inductive EdgeTargetsNamed (packages : List (Package system)) : Prop where
   | checked : edgeTargetsNamedBool packages = true -> EdgeTargetsNamed packages
 
@@ -406,6 +437,9 @@ inductive ReferencesResolve (packages : List (Package system)) : Prop where
 
 inductive NoFuelBoundedCycles (packages : List (Package system)) : Prop where
   | checked : acyclicByFuelBool packages = true -> NoFuelBoundedCycles packages
+
+inductive NoTopologicalCycles (packages : List (Package system)) : Prop where
+  | checked : topologicalAcyclicBool packages = true -> NoTopologicalCycles packages
 
 def ReferencesResolve.toCheckedBool :
     ReferencesResolve (system := system) packages -> refsResolveBool packages = true
@@ -423,10 +457,15 @@ def NoFuelBoundedCycles.toCheckedBool :
     NoFuelBoundedCycles (system := system) packages -> acyclicByFuelBool packages = true
   | .checked proof => proof
 
+def NoTopologicalCycles.toCheckedBool :
+    NoTopologicalCycles (system := system) packages -> topologicalAcyclicBool packages = true
+  | .checked proof => proof
+
 structure Valid (packages : List (Package system)) : Prop where
   edgeTargetsNamed : EdgeTargetsNamed packages
   referencesResolve : ReferencesResolve packages
   noFuelBoundedCycles : NoFuelBoundedCycles packages
+  noTopologicalCycles : NoTopologicalCycles packages
 
 end PackageClosure
 
@@ -445,6 +484,10 @@ def CheckedPackageGraph.edgeTargetsNamed (graph : CheckedPackageGraph system) :
 def CheckedPackageGraph.acyclicByFuel (graph : CheckedPackageGraph system) :
     PackageClosure.acyclicByFuelBool graph.packages = true :=
   graph.valid.noFuelBoundedCycles.toCheckedBool
+
+def CheckedPackageGraph.topologicalAcyclic (graph : CheckedPackageGraph system) :
+    PackageClosure.topologicalAcyclicBool graph.packages = true :=
+  graph.valid.noTopologicalCycles.toCheckedBool
 
 namespace SystemOutputs
 
@@ -574,14 +617,18 @@ def checkPackageGraph (system : System) (packages : List (Package system)) :
 
   if hRefs : PackageClosure.refsResolveBool packages = true then
     if hAcyclic : PackageClosure.acyclicByFuelBool packages = true then
-      pure {
-        packages := packages
-        valid := {
-          edgeTargetsNamed := .checked hRefs
-          referencesResolve := .checked hRefs
-          noFuelBoundedCycles := .checked hAcyclic
+      if hTopo : PackageClosure.topologicalAcyclicBool packages = true then
+        pure {
+          packages := packages
+          valid := {
+            edgeTargetsNamed := .checked hRefs
+            referencesResolve := .checked hRefs
+            noFuelBoundedCycles := .checked hAcyclic
+            noTopologicalCycles := .checked hTopo
+          }
         }
-      }
+      else
+        throw (.packageCycle system "unknown" "unknown")
     else
       throw (.packageCycle system "unknown" "unknown")
   else

@@ -56,6 +56,7 @@
     "CheckedSystemOutputs.formatterReferenceResolve",
     "PackageClosure.refsResolve",
     "PackageClosure.acyclicByFuel",
+    "PackageClosure.noTopologicalCycles",
     "CliProject.defaultOutputNames",
     "CliProject.appPointsAtPackage",
     "CliProject.checkPointsAtPackage",

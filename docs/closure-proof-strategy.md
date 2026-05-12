@@ -21,13 +21,16 @@ The package graph now has an explicit edge relation over package names:
 - `PackageClosure.EdgeTargetsNamed`
 - `PackageClosure.ReferencesResolve`
 - `PackageClosure.NoFuelBoundedCycles`
+- `PackageClosure.NoTopologicalCycles`
 
-Those properties are still produced by the current boolean checker.
+Those properties are still produced by executable boolean checkers.
 `ReferencesResolve` is intentionally connected to the edge-target property: a
 `ReferencesResolve` witness can be converted to `EdgeTargetsNamed`, and
 `CheckedPackageGraph.edgeTargetsNamed` exposes the checked edge-target boolean
-fact. Existing code can still recover the older checked facts through
-`CheckedPackageGraph.refsResolve` and `CheckedPackageGraph.acyclicByFuel`.
+fact. `NoTopologicalCycles` is backed by a remove-ready-nodes topological
+checker over package names. Existing code can still recover checked facts
+through `CheckedPackageGraph.refsResolve`, `CheckedPackageGraph.acyclicByFuel`,
+and `CheckedPackageGraph.topologicalAcyclic`.
 
 `CheckedSystemOutputs system` now embeds `CheckedPackageGraph` and adds the
 output-family evidence around it:
@@ -49,11 +52,12 @@ What remains checker-backed:
 
 - the edge-target property is still backed by `edgeTargetsNamedBool`
 - acyclicity is still backed by fuel-bounded reachability
+- topological acyclicity is still backed by `topologicalAcyclicBool`
 - duplicate package names are still rejected as validation preconditions outside
   this graph property
 
-The next proof step should replace the `checked` constructors with lemmas from a
-clearer graph algorithm, such as a topological sort or a stronger reachability
-relation over package names. Until then, the cycle rejection path stays exactly
-the same and the Rust e2e harness continues to assert the structured cycle
-error.
+The next proof step should replace the `checked` constructors with lemmas that
+connect topological reduction success to absence of cycles, or with a stronger
+reachability relation over package names. Until then, the cycle rejection path
+stays exactly the same and the Rust e2e harness continues to assert the
+structured cycle error.

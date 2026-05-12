@@ -47,4 +47,24 @@ Prototype a proof-friendlier topological package graph checker.
 - `blog/yyyy-mm-dd-hh-mm-topological-package-closure-checker.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Add a topological remove-ready-nodes checker over package names.
+2. Carry its success as named `PackageClosure` evidence.
+3. Preserve the existing cycle rejection path and exact e2e error.
+4. Document the new checker-backed proof target.
+
+## Result
+- Added `PackageClosure.topologicalAcyclicBool` and supporting ready-node
+  reduction helpers.
+- Added `PackageClosure.NoTopologicalCycles` and exposed
+  `CheckedPackageGraph.topologicalAcyclic`.
+- `CheckedPackageGraph` now carries both existing fuel-bounded acyclicity and
+  the new topological acyclicity evidence.
+- Artifact manifests now name `PackageClosure.noTopologicalCycles`.
+- Updated proof strategy, PoC, and roadmap docs.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.

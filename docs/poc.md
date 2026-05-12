@@ -105,6 +105,8 @@ Package closure has its own checked boundary inside that value.
 - `PackageClosure.NoFuelBoundedCycles`: package dependency cycles are absent
   according to the same finite
   `packages.length + 1` reachability check used by validation
+- `PackageClosure.NoTopologicalCycles`: the package graph can be reduced by
+  repeatedly removing dependency-ready package names
 
 This is not a proof of Nix evaluation behavior. It is proof data for the Leanix
 graph assumptions the renderer relies on before emitting package entries. The

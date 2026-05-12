@@ -92,9 +92,9 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 - ✅ `CliProject.validate` and `CliProject.validateChecked` share the same
   witness-producing condition list.
 - 🟡 `PackageClosure.Valid` carries named closure properties
-  (`ReferencesResolve` and `NoFuelBoundedCycles`) instead of exposing only raw
-  boolean equality fields; the current constructors are still backed by the
-  finite checker.
+  (`ReferencesResolve`, `NoFuelBoundedCycles`, and `NoTopologicalCycles`)
+  instead of exposing only raw boolean equality fields; the current
+  constructors are still backed by executable checkers.
 - 🟡 `CheckCommand` provides a typed check-command surface with package/input
   reference validation while keeping `rawShell` as an explicit escape hatch.
 - ✅ `EscapePolicy` distinguishes development from strict artifact contexts.
@@ -102,8 +102,7 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   graph validity plus app, dev-shell, check, and formatter references.
 - ⬜ Prove that successful validation implies renderable output for the
   supported Nix backend subset.
-- ⬜ Prove `validateNoPackageCycles` is sound and complete (it is fuel-bounded
-  reachability today).
+- ⬜ Prove the topological checker's success means no package dependency cycles.
 - ⬜ Prove system compatibility lemmas at the type level rather than only
   enforcing them by indexing.
 

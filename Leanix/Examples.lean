@@ -316,6 +316,7 @@ def closureCheckedPackageGraph : CheckedPackageGraph .x86_64_linux where
     edgeTargetsNamed := .checked (by native_decide)
     referencesResolve := .checked (by native_decide)
     noFuelBoundedCycles := .checked (by native_decide)
+    noTopologicalCycles := .checked (by native_decide)
   }
 
 def missingRefPackage : Package .x86_64_linux where
