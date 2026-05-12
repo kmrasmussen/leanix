@@ -99,7 +99,6 @@ compatibility verifier. It checks the current showcase contract and replay:
 
 Future artifact verifier work should add:
 
-- manifest schema version checks
 - a public Rust operator command for generic artifact verification
 
 ## Ticket Completion Checklist

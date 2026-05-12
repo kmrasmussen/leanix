@@ -124,8 +124,8 @@ escape policy, and replay metadata.
 
 ## Operational
 
-- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0046`
-  are complete, and `TICKET-0047` through `TICKET-0051` are the active
+- 🟡 Backlog lives under `.tickets/`; `TICKET-0034` through `TICKET-0047`
+  are complete, and `TICKET-0048` through `TICKET-0051` are the remaining
   agent-legible roadmap wave.
 - ✅ CI workflow exists in `.github/workflows/ci.yml`.
 - ✅ Source trust modeling is represented by `Input.source`,

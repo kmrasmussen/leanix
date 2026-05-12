@@ -54,4 +54,23 @@ Document and test the artifact manifest as an evidence contract.
 - `blog/yyyy-mm-dd-hh-mm-artifact-manifest-contract.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Document the manifest schema and classify each field by trust boundary.
+2. Add Rust verifier checks for manifest `formatVersion` and
+   `rendererVersion`.
+3. Add exact e2e rejection cases for missing and mismatched schema fields.
+4. Keep both current artifact emitters passing the generic verifier.
+
+## Result
+- Added `docs/artifact-manifest.md`.
+- The Rust verifier now rejects missing or unsupported `formatVersion` and
+  `rendererVersion` values.
+- Added e2e cases for missing `formatVersion` and mismatched `formatVersion`.
+- Kept showcase and service artifacts on the same generic Rust preflight path.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.
+- Passed: `scripts/ci-local`.

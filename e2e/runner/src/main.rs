@@ -221,6 +221,19 @@ fn extract_json_string_field(text: &str, field: &str) -> Result<String, String> 
     Err(format!("manifest field {field} is missing or malformed"))
 }
 
+fn extract_json_number_field(text: &str, field: &str) -> Result<u64, String> {
+    let prefix = format!("\"{field}\": ");
+    for line in text.lines() {
+        let trimmed = trim_json_line(line);
+        if let Some(value) = trimmed.strip_prefix(&prefix) {
+            return drop_trailing_comma(value)
+                .parse::<u64>()
+                .map_err(|_| format!("manifest field {field} is missing or malformed"));
+        }
+    }
+    Err(format!("manifest field {field} is missing or malformed"))
+}
+
 fn extract_string_array(manifest: &str, field: &str) -> Result<Vec<String>, String> {
     let start = format!("\"{field}\": [");
     let empty = format!("\"{field}\": []");
@@ -362,12 +375,31 @@ fn verify_artifact_escape_policy(manifest: &str) -> Result<(), String> {
     }
 }
 
+fn verify_artifact_schema(manifest: &str) -> Result<(), String> {
+    let format_version = extract_json_number_field(manifest, "formatVersion")?;
+    if format_version != 1 {
+        return Err(format!(
+            "artifact manifest schema rejected: expected formatVersion 1, got {format_version}"
+        ));
+    }
+
+    let renderer_version = extract_json_string_field(manifest, "rendererVersion")?;
+    if renderer_version == "leanix-poc-1" {
+        Ok(())
+    } else {
+        Err(format!(
+            "artifact manifest schema rejected: expected rendererVersion leanix-poc-1, got {renderer_version}"
+        ))
+    }
+}
+
 fn verify_artifact_with_rust(repo: &Path, artifact_dir: &str) -> Result<(), String> {
     let dir = repo.join(artifact_dir);
     let manifest_path = dir.join("leanix.manifest.json");
     let manifest = fs::read_to_string(&manifest_path)
         .map_err(|err| format!("failed reading {}: {err}", manifest_path.display()))?;
 
+    verify_artifact_schema(&manifest)?;
     verify_artifact_escape_policy(&manifest)?;
     verify_artifact_input_policy(&manifest)?;
 
@@ -551,6 +583,83 @@ fn run_artifact_case(repo: &Path) -> Result<(), String> {
         repo,
         missing_file_artifact_dir,
         "generated file missing: flake.nix",
+    )?;
+
+    let missing_schema_artifact_dir = "generated/missing-schema-artifact";
+    eprintln!("case: artifact missing schema field rejection");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "emit-artifact",
+            "--out",
+            missing_schema_artifact_dir,
+        ],
+    )?;
+    let missing_schema_manifest_path = repo
+        .join(missing_schema_artifact_dir)
+        .join("leanix.manifest.json");
+    let missing_schema_manifest =
+        fs::read_to_string(&missing_schema_manifest_path).map_err(|err| {
+            format!(
+                "failed reading {}: {err}",
+                missing_schema_manifest_path.display()
+            )
+        })?;
+    let missing_schema_manifest = missing_schema_manifest
+        .lines()
+        .filter(|line| !line.contains("\"formatVersion\""))
+        .collect::<Vec<_>>()
+        .join("\n");
+    fs::write(&missing_schema_manifest_path, missing_schema_manifest).map_err(|err| {
+        format!(
+            "failed writing {}: {err}",
+            missing_schema_manifest_path.display()
+        )
+    })?;
+    expect_rust_artifact_verifier_failure(
+        repo,
+        missing_schema_artifact_dir,
+        "manifest field formatVersion is missing or malformed",
+    )?;
+
+    let mismatched_schema_artifact_dir = "generated/mismatched-schema-artifact";
+    eprintln!("case: artifact mismatched schema version rejection");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "emit-artifact",
+            "--out",
+            mismatched_schema_artifact_dir,
+        ],
+    )?;
+    let mismatched_schema_manifest_path = repo
+        .join(mismatched_schema_artifact_dir)
+        .join("leanix.manifest.json");
+    let mismatched_schema_manifest =
+        fs::read_to_string(&mismatched_schema_manifest_path).map_err(|err| {
+            format!(
+                "failed reading {}: {err}",
+                mismatched_schema_manifest_path.display()
+            )
+        })?;
+    let mismatched_schema_manifest =
+        mismatched_schema_manifest.replace("\"formatVersion\": 1,", "\"formatVersion\": 2,");
+    fs::write(&mismatched_schema_manifest_path, mismatched_schema_manifest).map_err(|err| {
+        format!(
+            "failed writing {}: {err}",
+            mismatched_schema_manifest_path.display()
+        )
+    })?;
+    expect_rust_artifact_verifier_failure(
+        repo,
+        mismatched_schema_artifact_dir,
+        "artifact manifest schema rejected: expected formatVersion 1, got 2",
     )?;
     Ok(())
 }

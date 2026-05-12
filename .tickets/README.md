@@ -22,8 +22,8 @@ the pinned GitHub input rendering failure and a local CI parity workflow before
 push.
 
 The active agent-legible roadmap wave is materialized as `TICKET-0047` through
-`TICKET-0051`: artifact contract, graph summary, escape-hatch inventory,
-generated-Nix backend contract, and a NixOS control-plane design spike.
+`TICKET-0051`. `TICKET-0047` is complete; `TICKET-0048` through `TICKET-0051`
+remain ready to pick up as implementation slices.
 
 Use `roadmap/00-current-state.md`, `roadmap/02-milestones.md`,
 `roadmap/03-workstreams.md`, and `roadmap/05-verification-strategy.md` as the

@@ -183,6 +183,10 @@ reference, generated files, file hashes, systems, inputs, source trust classes,
 pin policies, pin metadata, packages, app/check package references, checked
 invariant names, and replay commands.
 
+The maintained field contract is documented in
+[`docs/artifact-manifest.md`](artifact-manifest.md). It classifies each field as
+Rust-checked, Lean evidence, Nix-witnessed, or informational.
+
 The current artifacts are proof-carrying in a deliberately narrow sense. Lean
 checks schema invariants, package closure, finite acyclicity, source trust
 requirements, and graph validation before emitting each artifact. The checked

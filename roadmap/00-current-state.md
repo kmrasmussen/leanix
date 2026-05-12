@@ -5,8 +5,8 @@ This is a snapshot of the project as of 2026-05-12 after the roadmap wave from
 
 ## Repository State
 
-- `.tickets/TICKET-0001` through `.tickets/TICKET-0046` are completed.
-- The active agent-legible roadmap wave is `TICKET-0047` through
+- `.tickets/TICKET-0001` through `.tickets/TICKET-0047` are completed.
+- The remaining active agent-legible roadmap wave is `TICKET-0048` through
   `TICKET-0051`.
 - `TICKET-0045` and `TICKET-0046` record CI-regression follow-up work around
   pinned GitHub input rendering and local CI parity.
