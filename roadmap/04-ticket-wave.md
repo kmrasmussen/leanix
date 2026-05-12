@@ -1,203 +1,302 @@
 # Proposed Next Ticket Wave
 
-This is a candidate backlog wave after the completed `TICKET-0025` state. These
-are written as concrete tickets so they can be copied into `.tickets/` when the
-project is ready.
+This is the next candidate backlog wave after the completed `TICKET-0033`
+state. The previous wave, `TICKET-0026` through `TICKET-0033`, has been
+materialized and completed. This wave focuses on the pressure that remains in
+the roadmap: richer schemas, deeper build plans, a Rust-owned artifact verifier,
+stronger graph/proof boundaries, better interop, and policy/CLI follow-through.
 
-## TICKET-0026: Formatter Schema
-
-Problem:
-
-Flakes commonly expose formatter outputs, but Leanix currently models packages,
-apps, dev shells, and checks only.
-
-Goal:
-
-Add the first typed formatter output model and one schema path that can expose a
-formatter convention.
-
-Scope:
-
-- add `Formatter` or equivalent output type
-- render formatter outputs
-- validate formatter package references
-- add one valid example and one invalid e2e case
-- update schema docs
-
-Acceptance:
-
-- generated flake exposes `formatter.${system}`
-- invalid formatter package reference fails before rendering
-- e2e passes `nix flake check`
-
-## TICKET-0027: BuildPlan Install File and Copy Source Constructors
+## TICKET-0034: Service Schema
 
 Problem:
 
-`BuildPlan` exists, but many structured build operations are still authored
-directly as backend `BuildStep` values.
+Leanix has CLI, library, multi-app, multi-system, and formatter schemas, but it
+does not yet model service-like projects or daemon-style apps.
 
 Goal:
 
-Move common file/source operations into build-plan constructors with named
-arguments.
+Add a small service-oriented schema that exposes one package, one app entry, a
+dev shell, and one or more checks around a daemon command.
 
 Scope:
 
-- add build-plan constructors for copying source trees and installing text files
-- migrate one existing example from direct `BuildExpr.runSteps`
-- validate package/input refs before lowering
-- add invalid e2e case for missing input
+- define a concrete `ServiceProject` or equivalent
+- validate service app/check package references and naming conventions
+- render one valid service example with a golden fixture
+- add one invalid schema convention e2e case
+- document when to use a service schema instead of `CliProject` or raw `Flake`
 
 Acceptance:
 
-- at least one package is authored entirely through build plans
-- generated golden is stable or intentionally updated
-- missing input in a plan fails with exact stderr
+- service schema lowers through `ValidatedSchema`
+- generated flake passes `nix flake check`
+- invalid service schema error names the violated convention
 
-## TICKET-0028: General Artifact Verifier Skeleton
+## TICKET-0035: Schema Catalog Reference
 
 Problem:
 
-`verify-artifact` still verifies the showcase artifact contract directly.
+Schemas have grown organically, and `docs/poc.md` plus blog notes are no
+longer enough as a stable reference.
 
 Goal:
 
-Create a general artifact verification layer that can inspect generated files,
-manifest fields, and replay commands beyond the showcase.
+Add a maintained schema catalog that explains available schemas, their
+contracts, examples, escape hatches, and when to drop to raw graph values.
 
 Scope:
 
-- introduce Rust-owned or Lean-owned manifest reading decision
-- check generated file existence from manifest
-- record and verify file hashes
-- add tampered artifact e2e fixture
-- keep showcase verifier behavior intact during migration
+- add `docs/schema-catalog.md`
+- include `CliProject`, `MultiSystemCliProject`, `LibraryProject`,
+  `MultiAppProject`, `FormatterProject`, and any new service schema if present
+- map each schema to examples and CLI registry names
+- explain shared validation conventions and policy boundaries
+- add a "raw Flake remains valid when..." section
 
 Acceptance:
 
-- verifier rejects a tampered `flake.nix`
-- verifier rejects a missing generated file
-- showcase artifact still verifies
+- docs describe every implemented schema
+- README/examples docs link to the catalog
+- the catalog reflects current code, not speculative future shapes
 
-## TICKET-0029: Lockfile Witness Metadata
+## TICKET-0036: BuildPlan Run Executable and Lean Package Constructors
 
 Problem:
 
-Artifact manifests can record pinned refs, but they cannot yet justify
-lockfile-backed floating inputs.
+`BuildPlan` covers several file/source cases, but common package authoring still
+falls back to backend-shaped `BuildExpr.runSteps`.
 
 Goal:
 
-Define and verify the first lockfile witness metadata.
+Add build-plan constructors for running a package executable into an output and
+building a Lean package from a source/input tree.
 
 Scope:
 
-- add lockfile witness fields to `ArtifactInput`
-- decide minimal node metadata to record
-- add verifier checks for witness presence
-- add e2e case for lockfile-backed input
-- document development versus artifact policy
+- add named-argument build-plan constructors for executable-run and Lean build
+  package cases
+- lower them to the existing backend representation
+- validate package/input references before lowering
+- migrate at least one example currently using direct `BuildExpr.runSteps`
+- add invalid e2e cases for missing package/input references
 
 Acceptance:
 
-- pinned refs and lockfile-backed refs are separate trust classes
-- floating refs without witness still fail artifact verification
-- docs state what Leanix does not resolve automatically
+- at least one additional example is authored through `Package.fromBuildPlan`
+- generated golden changes are intentional and documented
+- invalid plan failures have exact stderr e2e coverage
 
-## TICKET-0030: Package Closure Graph Relation
+## TICKET-0037: BuildPlan Path and Destination Validation
 
 Problem:
 
-`PackageClosure.Valid` now has named properties, but those properties are still
-constructed from boolean checks.
+Build-plan argument records expose destinations and paths, but Leanix does not
+yet validate basic path hazards.
 
 Goal:
 
-Introduce an explicit graph relation over package names as the next proof
-target.
+Add conservative validation for build-plan paths and destinations.
 
 Scope:
 
-- define package-edge relation
-- define reachability or acyclicity proposition
-- connect reference-resolution boolean to the named property
-- update `docs/closure-proof-strategy.md`
+- define simple path rules for build-plan destinations and source paths
+- reject empty paths, absolute host destinations where not intended, and parent
+  traversal where practical
+- add exact stderr e2e cases
+- document the boundary: this is authoring validation, not a full filesystem
+  security model
 
 Acceptance:
 
+- invalid path examples fail before rendering
+- valid existing build-plan examples still pass
+- docs state which path forms are accepted and why
+
+## TICKET-0038: Rust Artifact Verifier
+
+Problem:
+
+`verify-artifact` still lives in the Lean CLI and uses simple string/line
+checks. That is increasingly mismatched with the roadmap principle that Rust
+owns filesystem and manifest verification workflows.
+
+Goal:
+
+Move generic artifact verification into Rust while preserving the existing
+Lean-emitted artifact format.
+
+Scope:
+
+- add a Rust-owned verifier path in the e2e runner or a small Rust CLI helper
+- parse enough manifest structure without adding external crates unless needed
+- verify generated files, file hashes, replay command list, input policy, and
+  escape policy from manifest data
+- keep `leanix verify-artifact` working as a compatibility wrapper or document
+  the transition
+- add e2e coverage for success and tamper/missing-file failures
+
+Acceptance:
+
+- Rust verifier can verify the showcase artifact
+- Rust verifier rejects tampered and missing generated files
+- docs clearly state which verifier is authoritative
+
+## TICKET-0039: Multiple Artifact Examples
+
+Problem:
+
+Artifact emission and verification are still centered on the proof-carrying CLI
+showcase.
+
+Goal:
+
+Add at least one second artifact shape so verifier work is not accidentally
+showcase-specific.
+
+Scope:
+
+- define a second artifact emitter, likely for a formatter or service schema
+- generate a manifest from checked values
+- verify both artifacts in e2e
+- ensure manifest fields are not hard-coded to the CLI showcase
+- add docs explaining artifact variants
+
+Acceptance:
+
+- two artifact directories can be emitted and verified
+- artifact manifests differ where their schema/output shape differs
+- verifier failures remain exact and actionable
+
+## TICKET-0040: Checked Outputs By System
+
+Problem:
+
+`ValidatedFlake` validates whole flakes, but the proof/evidence boundary does
+not expose a reusable checked-output value per system.
+
+Goal:
+
+Introduce a checked per-system output boundary that can carry package graph,
+app, shell, check, and formatter reference evidence.
+
+Scope:
+
+- define `CheckedSystemOutputs` or equivalent
+- populate it during validation
+- expose named evidence for package references, app/check/shell references, and
+  formatter references
+- keep renderer behavior unchanged in the first slice
+- document how this relates to `ValidatedFlake`
+
+Acceptance:
+
+- validation produces reusable checked-output evidence
 - examples still elaborate without brittle proof terms
-- cycle e2e stays exact
-- docs explain what is proven and what is still checker-backed
+- artifact invariant names can point at the checked-output boundary
 
-## TICKET-0031: Parsed Nix Summary Contract
+## TICKET-0041: Topological Package Closure Checker
 
 Problem:
 
-Leanix's nixparserlean interop uses JSON string fragments instead of a stable
-summary contract.
+Package cycle rejection is still fuel-bounded reachability. It works, but the
+proof story remains indirect.
 
 Goal:
 
-Make generated-Nix interop checks less fragile and more meaningful.
+Prototype a proof-friendlier topological package graph checker.
 
 Scope:
 
-- define desired parsed summary shape
-- update Leanix e2e expectations
-- make sibling nixparserlean changes if needed
-- cover inputs and output aliases
+- define a topological ordering or remove-ready-nodes algorithm over package
+  names
+- connect success to named acyclicity evidence
+- preserve missing-reference and cycle error quality
+- keep the existing cycle e2e exact, or intentionally update it with a better
+  message
+- write/update proof strategy docs
 
 Acceptance:
 
-- `--nixparserlean-dir` e2e checks structured facts, not broad string fragments
-- docs keep the interop claim narrow
+- `CheckedPackageGraph` carries clearer acyclicity evidence
+- invalid cycle e2e remains covered
+- docs explain what is proven versus still checker-backed
 
-## TICKET-0032: Raw Escape Hatch Policy
+## TICKET-0042: NixParserLean Artifact Interop
 
 Problem:
 
-Raw shell and raw graph escape hatches are explicit, but there is no policy mode
-that can reject them for strict artifacts.
+The optional nixparserlean interop suite checks generated examples, but not the
+proof-carrying artifact flake itself.
 
 Goal:
 
-Introduce policy values for development versus artifact contexts.
+Add an artifact-flake interop case and tighten the parsed contract around
+artifact output shape.
 
 Scope:
 
-- define policy type
-- validate raw shell/check/build-step use according to policy
+- render an artifact under `generated/`
+- run nixparserlean `--desugar --format json` and `--eval` against the artifact
+  `flake.nix`
+- check input declarations, output families, default aliases, and pinned-input
+  shape where visible to the parser
+- document that this is still parse/desugar/top-level eval, not full semantic
+  equivalence
+
+Acceptance:
+
+- `--nixparserlean-dir` e2e covers the artifact flake
+- interop docs describe the artifact case and its boundary
+- generated interop files remain ignored under `generated/`
+
+## TICKET-0043: CLI Check Command and E2E Filters
+
+Problem:
+
+`leanix render NAME --out FILE` improves discovery, but checking still requires
+manual `nix flake check` or the full Rust e2e harness.
+
+Goal:
+
+Add a Rust-owned workflow for focused render-and-check usage, plus e2e filters
+for faster development loops.
+
+Scope:
+
+- decide whether this is a Rust helper binary or an extension of the e2e runner
+- add a command/filter for running one or a subset of cases
+- support render plus `nix flake check` for a named registry example
+- keep Lean focused on pure rendering
+- document the workflow
+
+Acceptance:
+
+- one named example can be checked without running the whole suite
+- full e2e remains the default gate
+- docs explain when to use focused checks
+
+## TICKET-0044: Policy Matrix for CI and Impure Sources
+
+Problem:
+
+Leanix now has development and strict artifact escape policies, plus input pin
+policy, but there is no coherent matrix for CI and impure/local source rules.
+
+Goal:
+
+Define a small policy matrix for development, CI, and strict artifact contexts.
+
+Scope:
+
+- extend policy values or add a policy record for CI
+- define behavior for floating flake refs, impure local sources, raw shell, and
+  missing artifact evidence
+- add e2e rejection cases for at least one CI-only or artifact-only rule
 - keep development examples ergonomic
-- make artifact policy stricter
-- add rejection e2e for a raw shell check under strict policy
+- update docs and manifests where policy is recorded
 
 Acceptance:
 
-- `CheckCommand.rawShell` remains usable in development
-- strict artifact policy rejects at least one raw escape hatch
-- docs list policy behavior
-
-## TICKET-0033: CLI Example Registry
-
-Problem:
-
-The CLI has many specific `render-*` commands, which is useful for e2e but
-awkward for users.
-
-Goal:
-
-Add a small example registry without removing existing commands.
-
-Scope:
-
-- `leanix list-examples`
-- `leanix render-example-name NAME --out FILE`, or a similarly simple command
-- keep old commands for compatibility
-- update docs and e2e
-
-Acceptance:
-
-- all existing examples are discoverable
-- one e2e path uses the registry command
-- old commands still pass
+- policy behavior is explicit in code and docs
+- at least one impure/local source policy rejection has exact stderr coverage
+- artifact manifests still record the active policy

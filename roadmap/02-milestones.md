@@ -4,108 +4,102 @@ The roadmap is organized as milestones that can become ticket waves. Each
 milestone should be small enough to land with documentation, e2e coverage, a
 blog note, and a commit.
 
-## Milestone 1: Schema Catalog V1
+This file reflects the state after `TICKET-0033`. Completed slices remain
+important context, but the next concrete backlog is `TICKET-0034` through
+`TICKET-0044` in `roadmap/04-ticket-wave.md`.
+
+## Milestone 1: Schema Catalog V2
 
 Goal: make Leanix useful for more than CLI demos without creating a universal
 schema language.
 
-Deliverables:
+Already landed:
 
-- `FormatterProject` or formatter extension for existing schemas
+- `CliProject`, `MultiSystemCliProject`, `LibraryProject`, `MultiAppProject`,
+  and `FormatterProject`
+- valid examples, invalid e2e cases, and goldens for the current schema set
+
+Next deliverables:
+
 - one service-style app schema or daemon-oriented schema
-- schema docs that explain when to use `CliProject`, `LibraryProject`,
-  `MultiAppProject`, and raw `Flake`
-- invalid e2e cases for each new schema convention
-- golden fixtures for valid examples
+- schema catalog reference docs that explain when to use each schema
+- clearer guidance for when raw `Flake` remains the right escape hatch
+- shared schema helper extraction only where repeated conventions justify it
 
 Acceptance checks:
 
-- new schema lowers through `ValidatedSchema`
+- new schemas lower through `ValidatedSchema`
 - invalid schema errors name the violated convention
 - examples pass `nix flake check`
-- docs clearly describe the schema choice
-
-Likely files:
-
-- `Leanix/Schema.lean`
-- `Leanix/Examples.lean`
-- `Main.lean`
-- `e2e/runner/src/main.rs`
-- `e2e/golden/*.flake.nix`
-- `docs/poc.md`
-- `examples/README.md`
+- docs clearly describe schema choice
 
 ## Milestone 2: BuildPlan V2
 
 Goal: make build plans the normal package authoring surface.
 
-Deliverables:
+Already landed:
 
-- migrate more packages from direct `BuildExpr` to `BuildPlan`
-- add typed build-plan constructors for common operations:
-  - install text file
-  - copy fixed-output source
-  - run package executable
-  - build Lean package from input tree
-- add build-plan validation for:
-  - duplicate args
-  - invalid destination paths where practical
-  - missing source/input/package references
-- make package dependencies available from build plans before lowering
+- typed build-plan constructors for known nixpkgs packages, executable text
+  wrappers, input tree/file copies, and text-file installation
+- validation for duplicate args and missing source/input/package references
+- multiple examples using `Package.fromBuildPlan`
+
+Next deliverables:
+
+- typed constructors for running package executables and building Lean packages
+  from input trees
+- conservative path/destination validation
+- clearer package dependency extraction from build plans before lowering
+- more examples migrated away from direct `BuildExpr.runSteps`
 
 Acceptance checks:
 
-- at least two existing examples use `Package.fromBuildPlan`
+- at least two additional examples use `Package.fromBuildPlan`
 - generated goldens stay stable or intentionally change with explanation
 - invalid plan cases have exact stderr e2e tests
-
-Likely files:
-
-- `Leanix/Core.lean`
-- `Leanix/Validate.lean`
-- `Leanix/Examples.lean`
-- `e2e/runner/src/main.rs`
 
 ## Milestone 3: Artifact Manifest V2
 
 Goal: make artifacts verifiable beyond the showcase hard-coded contract.
 
-Deliverables:
+Already landed:
 
-- manifest parser or structured verifier in Rust
-- per-file hashes for generated files
-- replay command list execution from manifest data rather than hard-coded
-  showcase expectations
-- manifest schema versioning rules
-- lockfile witness field that can justify lockfile-backed flake inputs
-- negative tests for mismatched file hashes, missing generated files, and
-  unsupported input policy
+- manifest-driven generated-file checks
+- file hash recording and tamper rejection
+- lockfile witness metadata
+- strict artifact escape policy
+- input policy rejection cases
+
+Next deliverables:
+
+- Rust-owned generic artifact verifier
+- multiple artifact examples
+- manifest schema/version reference docs
+- replay command execution from manifest data rather than showcase-specific
+  expectations
 
 Acceptance checks:
 
-- `verify-artifact DIR` can verify at least two artifact directories
-- verifier rejects a tampered `flake.nix`
-- verifier rejects a missing or mismatched manifest field
+- at least two artifact directories can be emitted and verified
+- verifier rejects tampered and missing generated files
+- verifier rejects missing or mismatched manifest fields
 - development render commands remain unchanged
-
-Likely files:
-
-- `Leanix/Artifact.lean`
-- `Main.lean` for transitional CLI behavior
-- `e2e/runner/src/main.rs`
-- future `e2e/artifact-fixtures/`
 
 ## Milestone 4: Package Closure Proof V2
 
 Goal: connect package closure evidence to a clearer graph property.
 
-Deliverables:
+Already landed:
 
 - explicit package graph relation over package names
-- proof-friendly reachability or topological sort model
-- lemma from successful checker to `ReferencesResolve`
-- lemma from successful checker to `NoFuelBoundedCycles`, or a replacement
-  checker with a cleaner proof story
+- named package closure properties for reference resolution and fuel-bounded
+  cycle rejection
+
+Next deliverables:
+
+- topological or proof-friendlier cycle checker
+- lemmas connecting successful checks to named graph properties
+- checked per-system output evidence
 - updated proof strategy docs
 
 Acceptance checks:
@@ -114,27 +108,23 @@ Acceptance checks:
 - invalid cycle e2e remains exact
 - proof names in artifact manifest stay meaningful
 
-Likely files:
-
-- `Leanix/Validate.lean`
-- `Leanix/Examples.lean`
-- `docs/closure-proof-strategy.md`
-
 ## Milestone 5: NixParserLean Contract V2
 
 Goal: replace fragile parsed-Nix string checks with a meaningful contract.
 
-Deliverables:
+Already landed:
 
-- a richer parsed summary mode in `nixparserlean`, or a stable JSON subset
-  consumed by Leanix
-- contracts for:
-  - output families
-  - active systems
-  - package/app/check references
-  - default aliases
-  - input declarations
-- optional fixture for generated artifact flake
+- parsed-contract checks for selected generated examples
+- input declarations, output families, systems, formatters, and selected
+  default aliases in the optional interop lane
+- docs that state the parse/desugar/top-level eval boundary
+
+Next deliverables:
+
+- dedicated summary mode in `nixparserlean`, or a stable JSON subset that is
+  less path/string-fragment driven
+- artifact-flake interop case
+- better stale sibling-checkout reporting
 
 Acceptance checks:
 
@@ -143,48 +133,51 @@ Acceptance checks:
 - interop docs clearly state parse/desugar/eval boundaries
 - generated files remain ephemeral under `generated/`
 
-Likely files:
-
-- `e2e/runner/src/main.rs`
-- `interop/nixparserlean/README.md`
-- possibly sibling `nixparserlean` changes
-
 ## Milestone 6: CLI and Developer Experience
 
 Goal: make Leanix easier to use without weakening the model.
 
-Deliverables:
+Already landed:
 
 - `leanix list-examples`
-- `leanix render EXAMPLE --out FILE` instead of many ad hoc commands, if it
-  can stay simple
-- `leanix check EXAMPLE` to render then run `nix flake check`, likely Rust-owned
-  if subprocess orchestration grows
-- better CLI help output
-- docs that map examples to commands and proof boundaries
+- generic `leanix render NAME --out FILE`
+- compatibility preservation for old `render-*` commands
+- registry e2e coverage
+
+Next deliverables:
+
+- focused render-and-check workflow, likely Rust-owned
+- e2e case filters for faster development loops
+- better structured CLI/help output if the current Lean command grows too much
+- docs that map examples, checks, and proof boundaries
 
 Acceptance checks:
 
-- old commands either continue working or are intentionally deprecated
-- e2e covers the new user-facing command path
-- no subprocess orchestration is moved into Lean unless there is a strong reason
+- old commands continue working unless intentionally deprecated
+- e2e covers new user-facing command paths
+- subprocess orchestration stays in Rust unless there is a strong reason
 
 ## Milestone 7: Policy Layer
 
 Goal: make reproducibility, trust, and escape-hatch policies explicit.
 
-Deliverables:
+Already landed:
 
-- policy values for development, CI, and proof-carrying artifact contexts
-- validation that can vary by policy:
-  - floating flake refs allowed or rejected
-  - raw shell allowed, warned, or rejected
-  - impure local sources allowed or rejected
-  - missing artifact evidence rejected
-- manifest records the active policy
+- development and strict artifact escape policies
+- artifact manifests record active escape policy
+- strict artifact policy rejects raw check/build-script escape hatches
+- artifact input policy rejects unsupported floating refs
+
+Next deliverables:
+
+- CI policy value or policy record
+- explicit behavior for floating flake refs, impure local sources, raw shell,
+  and missing artifact evidence across development, CI, and strict artifact
+  contexts
+- e2e coverage for at least one policy rejection per policy class
 
 Acceptance checks:
 
 - development examples stay ergonomic
-- artifact examples are strict
-- e2e covers at least one policy rejection per policy class
+- CI/artifact examples are stricter where documented
+- e2e covers policy rejections with exact stderr

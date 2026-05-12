@@ -30,7 +30,9 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   dev-shell/check conventions.
 - ✅ `MultiAppProject` models one package graph exposed through several app
   outputs.
-- ⬜ Formatter-oriented schemas.
+- ✅ `FormatterProject` models formatter outputs as typed package references.
+- ⬜ Service, package-set, and documentation-oriented schemas.
+- ⬜ Maintained schema catalog reference.
 
 ## Phase 2: Reproducibility Model — 🟡
 
@@ -44,11 +46,15 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   lockfile witness.
 - 🟡 Track builder identity and declared dependencies beyond the package graph:
   `BuildPlan` now names typed builder identities for known nixpkgs packages,
-  executable text wrappers, and input-tree copies, and exposes package/input
-  references before lowering.
+  executable text wrappers, input-tree/file copies, and text-file installation,
+  and exposes package/input references before lowering.
 - 🟡 Model build plans separately from realized store paths: plans lower to the
   existing Nix-shaped `BuildExpr` backend in the first slice.
 - ✅ Validation returns structured `ValidateError` and `SchemaError` values.
+- ✅ Proof-carrying artifacts record pinned input evidence or lockfile witness
+  metadata, and strict artifact policy rejects raw check/build-script escape
+  hatches.
+- ⬜ CI policy and impure/local source policy matrix.
 
 ## Phase 3: Nix Interop — 🟡
 
@@ -65,9 +71,12 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   logical CLI project across systems.
 - ✅ Build-expression depth exhaustion is reported as a Lean render error, not
   embedded as a generated Nix `throw`.
-- ⬜ Read parsed Nix from `nixparserlean` for comparison.
-- ⬜ Round-trip check: parse the rendered flake back and assert preservation of
-  the typed output schema.
+- ✅ Optional nixparserlean interop reads `--desugar --format json` for selected
+  generated flakes, checks parsed-output contracts, and runs top-level `--eval`.
+- 🟡 Round-trip shape checks cover selected inputs, output families, active
+  systems, formatter outputs, and default aliases; a dedicated nixparserlean
+  summary mode is still future work.
+- ⬜ Artifact-flake interop case.
 
 ## Phase 4: Proofs — 🟡
 
@@ -83,10 +92,12 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   finite checker.
 - 🟡 `CheckCommand` provides a typed check-command surface with package/input
   reference validation while keeping `rawShell` as an explicit escape hatch.
+- ✅ `EscapePolicy` distinguishes development from strict artifact contexts.
 - ⬜ Prove that successful validation implies renderable output for the
   supported Nix backend subset.
 - ⬜ Prove `validateNoPackageCycles` is sound and complete (it is fuel-bounded
   reachability today).
+- ⬜ Introduce checked per-system output evidence.
 - ⬜ Prove system compatibility lemmas at the type level rather than only
   enforcing them by indexing.
 
@@ -94,11 +105,23 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 
 The first showcase artifact exists: `leanix emit-artifact --out DIR` writes a
 rendered `flake.nix` and `leanix.manifest.json` with source reference, checked
-invariants, input trust classes, and replay metadata.
+invariants, input trust classes, pin/lockfile evidence, file hashes, active
+escape policy, and replay metadata.
+
+- ✅ `verify-artifact` performs a generic manifest preflight for generated files
+  and file hashes before showcase-specific checks.
+- ✅ e2e covers tampered artifacts, missing generated files, floating input
+  rejection, lockfile witness acceptance, and strict raw-check rejection.
+- ⬜ Rust-owned generic artifact verifier.
+- ⬜ Multiple artifact examples beyond the CLI showcase.
 
 ## Operational
 
-- 🟡 Backlog lives under `.tickets/`.
+- 🟡 Backlog lives under `.tickets/`; the active next wave is
+  `TICKET-0034` through `TICKET-0044`.
 - ✅ CI workflow exists in `.github/workflows/ci.yml`.
 - ✅ Source trust modeling is represented by `Input.source`,
   `Input.localDevSource`, and `Input.impureLocalSource`.
+- ✅ CLI example registry exists via `leanix list-examples` and
+  `leanix render NAME --out FILE`.
+- ⬜ Focused render-and-check workflow and e2e filters.

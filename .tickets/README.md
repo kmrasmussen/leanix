@@ -10,11 +10,15 @@ narrow commit.
 Each significant implementation slice should still be small, tested, blogged,
 and committed independently. Tickets are the map; commits are the trail.
 
-## Roadmap Wave
+## Roadmap Waves
 
-The active post-`TICKET-0025` roadmap wave is materialized as `TICKET-0026`
-through `TICKET-0033`. These tickets come from `roadmap/04-ticket-wave.md` and
-are ready to pick up as implementation slices.
+The post-`TICKET-0025` roadmap wave was materialized as `TICKET-0026` through
+`TICKET-0033` and is now complete.
 
-Use `roadmap/02-milestones.md`, `roadmap/03-workstreams.md`, and
-`roadmap/05-verification-strategy.md` as the broader context for those tickets.
+The active next roadmap wave is materialized as `TICKET-0034` through
+`TICKET-0044`. These tickets come from `roadmap/04-ticket-wave.md` and are ready
+to pick up as implementation slices.
+
+Use `roadmap/00-current-state.md`, `roadmap/02-milestones.md`,
+`roadmap/03-workstreams.md`, and `roadmap/05-verification-strategy.md` as the
+broader context for those tickets.

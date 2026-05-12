@@ -14,16 +14,17 @@ Current assets:
 - `MultiSystemCliProject`
 - `LibraryProject`
 - `MultiAppProject`
+- `FormatterProject`
 - `ValidatedSchema`
 - `BuildPlan`
 - `CheckCommand`
 
 Next work:
 
-- formatter schema or formatter extension
 - service-style schema
-- package-set schema
-- schema composition helpers
+- package-set or data-only schema
+- schema catalog reference
+- schema composition helpers only where repeated patterns justify them
 - richer build-plan constructors
 - fewer example packages authored directly as `BuildExpr`
 
@@ -51,12 +52,13 @@ Current assets:
 - `CheckedPackageGraph`
 - `PackageClosure.ReferencesResolve`
 - `PackageClosure.NoFuelBoundedCycles`
+- strict/development escape policy validation
 
 Next work:
 
+- checked outputs per system
 - prove reference-resolution helper lemmas
-- replace fuel-bounded cycle evidence with a clearer graph proof
-- introduce checked outputs per system
+- replace or supplement fuel-bounded cycle evidence with a clearer graph proof
 - connect schema validity to graph validity more explicitly
 - make proof-carrying artifact invariant names generated from checked
   structures instead of maintained as a manual list
@@ -82,6 +84,7 @@ Current assets:
 - `renderFlake`
 - active-system output blocks
 - defaults for packages/apps
+- formatter output rendering
 - quoted attr names and escaped strings
 - fixed-output source rendering
 - generated golden fixtures
@@ -89,11 +92,10 @@ Current assets:
 Next work:
 
 - renderer errors with better context
-- formatter output rendering
 - service/app rendering conventions
 - optional metadata for apps/checks
 - backend-neutral build-plan lowering API
-- renderer support for artifact hash manifests
+- renderer support for richer artifact manifests
 
 Risks:
 
@@ -115,17 +117,19 @@ Current assets:
 - `verify-artifact`
 - `leanix.manifest.json`
 - pinned input metadata
+- lockfile witness metadata
+- file hash recording and tamper detection
 - replay commands
-- verifier rejection of floating artifact flake inputs
+- strict artifact escape policy
 
 Next work:
 
-- generated file hashes
-- general artifact verifier
+- Rust-owned generic artifact verifier
 - multiple artifact examples
 - manifest schema docs
-- lockfile witness recording
-- tamper-detection e2e fixtures
+- replay command execution from manifest data rather than showcase-specific
+  checks
+- stricter policy matrix for CI/artifact contexts
 
 Risks:
 
@@ -147,14 +151,15 @@ Current assets:
 - no-dependency Rust e2e runner
 - generated flake checks
 - exact stderr checks
-- artifact replay
+- artifact replay and tamper fixtures
+- CLI registry coverage
 - optional nixparserlean interop
 
 Next work:
 
 - split e2e runner into modules once it becomes too large
-- add fixture helpers for artifact tampering
 - add command-line filters for cases
+- add a focused render-and-check workflow
 - add structured summary output for CI logs
 - possibly add a Rust CLI wrapper if user workflows outgrow Lean's executable
 
@@ -180,13 +185,13 @@ Current assets:
 - parsed contract checks for selected cases
 - `--desugar --format json`
 - `--eval` top-level record check
+- formatter/default-alias/input declaration checks in selected contracts
 
 Next work:
 
 - stable parsed summary contract
-- input declaration checks
-- default alias checks with less string matching
 - artifact flake interop case
+- source/pin shape checks where visible to the parser
 - explicit report when nixparserlean build state is stale
 
 Risks:
@@ -211,6 +216,7 @@ Current assets:
 - dated blog notes
 - examples README
 - this roadmap folder
+- CLI example registry docs
 
 Next work:
 

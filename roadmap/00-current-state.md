@@ -1,12 +1,12 @@
 # Current State
 
 This is a snapshot of the project after the completed ticket wave ending at
-commit `0eacfac` (`Add typed check commands`).
+commit `86314a7` (`Add CLI example registry`).
 
 ## Repository State
 
 - The main branch is up to date with `origin/main`.
-- All `.tickets/TICKET-0001` through `.tickets/TICKET-0025` are marked
+- All `.tickets/TICKET-0001` through `.tickets/TICKET-0033` are marked
   `completed`.
 - Two untracked files exist locally, `flagged.md` and `result`. They are not
   part of the tracked project state and should not be treated as roadmap input
@@ -24,18 +24,19 @@ Implemented:
   `aarch64-darwin`
 - input kinds: flake inputs, fixed-output sources, local development sources,
   and explicitly impure local sources
-- package, app, dev shell, and check outputs indexed by `System`
+- package, app, dev shell, check, and formatter outputs indexed by `System`
 - structured build text with typed package, input, and output-path fragments
 - `BuildExpr` as the current Nix backend representation
-- `BuildStep` structured operations, including source copy, file copy,
-  executable installation, Lean project build, `mkdir`, file writes, chmod, and
-  raw command escape hatches
-- `BuildPlan` as a first backend-neutral authoring layer over common package
+- `BuildStep` structured operations, including source copy, text-file install,
+  file copy, executable installation, Lean project build, `mkdir`, file writes,
+  chmod, and raw command escape hatches
+- `BuildPlan` as the first backend-neutral authoring layer over common package
   intentions
-- typed builder identities for known nixpkgs packages, executable wrappers, and
-  input-tree copies
+- typed builder identities for known nixpkgs packages, executable wrappers,
+  input-tree/file copies, and text-file installation
 - `CheckCommand` as a typed check-command surface with raw shell as an explicit
   escape hatch
+- `EscapePolicy` with development and strict artifact modes
 
 ## Implemented Validation
 
@@ -47,16 +48,19 @@ Implemented:
 - source inputs require a `narHash`
 - build expression input references resolve
 - build expression package references resolve
-- typed build text package references resolve
+- typed build text package/input references resolve
 - build plan package/input references resolve before lowering
 - duplicate wrapper arguments are rejected at the build-plan layer
 - check command package/input references resolve
+- formatter package references resolve
 - package env vars reject unsupported builder forms
 - duplicate env vars are rejected
 - package dependency cycles are rejected by fuel-bounded reachability
 - package closure evidence is carried through named properties:
   `PackageClosure.ReferencesResolve` and
   `PackageClosure.NoFuelBoundedCycles`
+- strict artifact policy rejects raw check commands and raw build-script
+  escape hatches before proof-carrying artifact emission
 
 ## Implemented Schemas
 
@@ -70,16 +74,19 @@ Implemented:
 - `LibraryProject`: package-first library-style output with default dev shell
   and check conventions
 - `MultiAppProject`: one package graph exposed through multiple apps
+- `FormatterProject`: formatter output as a typed package reference
 - `ValidatedSchema`: explicit boundary before schema lowering
 - `Flake.fromSchema` and `Flake.fromValidatedSchema`: schema-to-validated-flake
   paths
 
-Missing:
+Missing or still shallow:
 
-- formatter-oriented schemas
 - service/daemon schemas
 - documentation or website schemas
 - data-only/package-set schemas
+- schema catalog reference docs with a stable "which schema should I use"
+  decision table
+- schema composition helpers for repeated package/app/check/dev-shell patterns
 - schemas with policy knobs, such as "default app required" versus "all apps
   named"
 
@@ -90,25 +97,27 @@ Implemented:
 - `ValidatedFlake` is the renderer boundary.
 - Generated Nix emits active-system output blocks.
 - Package and app defaults are synthesized where needed.
+- Formatter outputs render as `formatter.${system}`.
 - String escaping and attr-name quoting are handled.
 - Fixed-output sources render through `builtins.fetchTree`.
 - Development sources remain non-flake source inputs with trust-boundary
   comments.
 - `emit-artifact` writes `flake.nix` and `leanix.manifest.json`.
-- `verify-artifact` checks the current artifact contract and replays the source
-  elaboration plus `nix flake check`.
+- `verify-artifact` performs a manifest-driven preflight for generated files
+  and file hashes before showcase-specific replay checks.
 - Artifact manifests record input trust classes, pin policy, rev/hash metadata,
-  systems, packages, app/check references, checked invariants, and replay
-  commands.
+  lockfile witness metadata, systems, packages, app/check references, checked
+  invariants, replay commands, and active escape policy.
 - Artifact verification rejects floating flake inputs without pinned ref or
   lockfile witness evidence.
 
 Important boundary:
 
-- The artifact verifier currently verifies the showcase contract, not arbitrary
-  manifests.
-- The manifest is emitted by Lean code as JSON text, not parsed through a robust
-  JSON library.
+- The artifact verifier still has showcase-specific checks after the generic
+  preflight.
+- The manifest is emitted by Lean code as JSON text, and verification still
+  uses simple string/line parsing rather than a real JSON model.
+- Rust is still the preferred owner for future generic artifact verification.
 
 ## Rust E2E Harness
 
@@ -120,8 +129,11 @@ It currently covers:
 - comparing selected generated flakes to goldens
 - running `nix flake check path:./generated`
 - proof-carrying artifact emission and verification
-- policy rejection for floating artifact inputs
+- tampered and missing generated-file artifact rejection
+- floating input and lockfile-witness artifact policy cases
+- strict artifact raw-check rejection
 - invalid examples with exact stderr checks
+- CLI example registry listing and generic rendering
 - optional nixparserlean interop through `--nixparserlean-dir`
 
 The harness deliberately has no external Rust crates.
@@ -140,20 +152,27 @@ It does not prove full semantic equivalence with Nix evaluation. It checks that
 generated flakes stay inside a subset that `nixparserlean` can parse, desugar,
 and evaluate at the top-level flake record.
 
+Current parsed contracts cover selected input declarations, output families,
+active systems, packages, apps, dev shells, checks, formatters, and selected
+default aliases.
+
 Next pressure:
 
-- replace string-fragment JSON checks with a richer parsed summary contract
+- replace desugared JSON path/string checks with a dedicated parsed summary
+  mode in `nixparserlean`
+- add an artifact-flake interop case
 - keep this as Rust-owned interop rather than a direct Lean dependency until the
   shared contract is more stable
 
 ## Near-Term Project Shape
 
-Leanix is now past the initial PoC. The next version should be a narrow,
-coherent system with:
+Leanix is now past the first proof of concept. The next version should make the
+system easier to extend and trust:
 
-- a small schema catalog
-- typed build plans as the main package-authoring API
-- fewer raw shell paths in normal examples
-- stronger proof-carrying graph values
-- artifact manifests that are verifiable beyond the showcase
-- explicit interop contracts with generated Nix
+- service and package-set schemas for common non-CLI shapes
+- a maintained schema catalog reference
+- build plans as the main package-authoring API for normal examples
+- a Rust-owned generic artifact verifier
+- stronger proof-carrying graph values and checked-output boundaries
+- explicit interop contracts with generated Nix and artifact flakes
+- a small Rust-owned user workflow for render-and-check commands
