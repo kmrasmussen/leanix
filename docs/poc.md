@@ -203,12 +203,17 @@ being inferred only from raw strings. The first typed identities are:
 - `BuildPlan.copyInputTree`, backed by `CopyInputTreeArgs`
 - `BuildPlan.copyInputFile`, backed by `CopyInputFileArgs`
 - `BuildPlan.installTextFile`, backed by `InstallTextFileArgs`
+- `BuildPlan.runPackageExecutableToOutput`, backed by
+  `RunPackageExecutableArgs`
+- `BuildPlan.leanPackageFromInputTree`, backed by
+  `LeanPackageFromInputTreeArgs`
 
-The wrapper, source-copy, and text-file identities carry named argument
-structures. Current validation rejects duplicate executable-wrapper arguments
-and missing package/input references before lowering to the backend expression.
-`BuildPlan.installTextFile` can also carry typed `BuildText`, so package and
-input references inside planned file content are visible to validation.
+The wrapper, source-copy, text-file, executable-run, and Lean-package identities
+carry named argument structures. Current validation rejects duplicate executable
+arguments and missing package/input references before lowering to the backend
+expression. `BuildPlan.installTextFile` can also carry typed `BuildText`, so
+package and input references inside planned file content are visible to
+validation.
 
 `BuildExpr` remains the current Nix backend representation. Rendering still
 works from `BuildExpr`, and `Package.fromBuildPlan` is the migration bridge from
@@ -269,6 +274,8 @@ behavior of external programs that typed commands invoke.
 - `leanix render-closure --out FILE` — typed package closure
 - `leanix render-build-plan-text-file --out FILE` — `BuildPlan.installTextFile`
   lowered to a generated package
+- `leanix render-build-plan-run-executable --out FILE` —
+  `BuildPlan.runPackageExecutableToOutput` lowered to a generated package
 - `leanix render-cli-schema --out FILE` — `CliProject` lowered to a flake
 - `leanix render-formatter-schema --out FILE` — `FormatterProject` lowered to
   `formatter.${system}`
@@ -294,6 +301,8 @@ behavior of external programs that typed commands invoke.
 - `leanix render-invalid-service-schema --out FILE`
 - `leanix render-invalid-multi-system-schema --out FILE`
 - `leanix render-invalid-build-plan-input-ref --out FILE`
+- `leanix render-invalid-build-plan-run-executable-ref --out FILE`
+- `leanix render-invalid-lean-package-input-ref --out FILE`
 - `leanix render-invalid-missing-ref --out FILE`
 - `leanix render-invalid-cycle --out FILE`
 - `leanix render-invalid-source-missing-hash --out FILE`

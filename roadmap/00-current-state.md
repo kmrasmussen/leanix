@@ -34,7 +34,8 @@ Implemented:
 - `BuildPlan` as the first backend-neutral authoring layer over common package
   intentions
 - typed builder identities for known nixpkgs packages, executable wrappers,
-  input-tree/file copies, and text-file installation
+  input-tree/file copies, text-file installation, package executable runs, and
+  Lean package builds from input trees
 - `CheckCommand` as a typed check-command surface with raw shell as an explicit
   escape hatch
 - `EscapePolicy` with development and strict artifact modes

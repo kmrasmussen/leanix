@@ -60,6 +60,11 @@ def validateBuildPlanArguments (owner : String) (plan : BuildPlan) :
         throw (.duplicateBuildPlanArguments owner)
       else
         pure ()
+  | .runPackageExecutableToOutput args =>
+      if hasDuplicateString args.arguments then
+        throw (.duplicateBuildPlanArguments owner)
+      else
+        pure ()
   | _ => pure ()
 
 def validateBuildPlanRefs (system : System) (inputNames packageNames : List String)

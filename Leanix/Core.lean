@@ -121,12 +121,27 @@ structure InstallTextFileArgs where
   content : BuildText
   deriving Repr, BEq
 
+structure RunPackageExecutableArgs where
+  derivationName : String
+  packageName : String
+  executable : String
+  arguments : List String := []
+  deriving Repr, BEq
+
+structure LeanPackageFromInputTreeArgs where
+  derivationName : String
+  inputName : String
+  sourceDestination : String := "source"
+  deriving Repr, BEq
+
 inductive BuildPlan where
   | nixpkgsPackage : KnownNixpkgsPackage -> BuildPlan
   | executableTextWrapper : ExecutableWrapperArgs -> BuildPlan
   | copyInputTree : CopyInputTreeArgs -> BuildPlan
   | copyInputFile : CopyInputFileArgs -> BuildPlan
   | installTextFile : InstallTextFileArgs -> BuildPlan
+  | runPackageExecutableToOutput : RunPackageExecutableArgs -> BuildPlan
+  | leanPackageFromInputTree : LeanPackageFromInputTreeArgs -> BuildPlan
   deriving Repr, BEq
 
 namespace BuildText
@@ -177,6 +192,8 @@ def inputRefs : BuildPlan -> List String
   | .copyInputTree args => [args.inputName]
   | .copyInputFile args => [args.inputName]
   | .installTextFile args => args.content.inputRefs
+  | .runPackageExecutableToOutput _ => []
+  | .leanPackageFromInputTree args => [args.inputName]
 
 def packageRefs : BuildPlan -> List String
   | .nixpkgsPackage _ => []
@@ -184,6 +201,8 @@ def packageRefs : BuildPlan -> List String
   | .copyInputTree _ => []
   | .copyInputFile _ => []
   | .installTextFile args => args.content.packageRefs
+  | .runPackageExecutableToOutput args => [args.packageName]
+  | .leanPackageFromInputTree _ => []
 
 def toBuildExpr : BuildPlan -> BuildExpr
   | .nixpkgsPackage package => .nixpkgs package.toAttr
@@ -211,6 +230,16 @@ def toBuildExpr : BuildPlan -> BuildExpr
   | .installTextFile args =>
       .runSteps args.derivationName [] [
         .installTextFile args.destination args.content
+      ]
+  | .runPackageExecutableToOutput args =>
+      .runSteps args.derivationName [.package args.packageName] [
+        .run (args.executable ++ argSuffix args.arguments ++ " > \"$out\"")
+      ]
+  | .leanPackageFromInputTree args =>
+      .runSteps args.derivationName [.nixpkgs KnownNixpkgsPackage.lean4.toAttr] [
+        .copySource (.inputPath args.inputName) args.sourceDestination,
+        .buildLeanProject args.sourceDestination,
+        .run "touch \"$out\""
       ]
 
 end BuildPlan

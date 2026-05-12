@@ -53,4 +53,28 @@ building a Lean package from a source/input tree.
 - `blog/yyyy-mm-dd-hh-mm-build-plan-run-executable-lean-package.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+- Add named-argument `BuildPlan` constructors for running package executables
+  and building Lean packages from input trees.
+- Make package/input refs visible through `BuildPlan.packageRefs` and
+  `BuildPlan.inputRefs`, with validation before lowering.
+- Migrate the self-check package to the Lean-package plan and add a valid
+  executable-run example with a golden fixture.
+- Add exact-stderr invalid e2e cases for the new missing package/input paths.
+- Update docs and blog notes.
+
+## Result
+- Added `RunPackageExecutableArgs` and `LeanPackageFromInputTreeArgs`.
+- Added `BuildPlan.runPackageExecutableToOutput` and
+  `BuildPlan.leanPackageFromInputTree`.
+- Migrated `leanixPackage` to `Package.fromBuildPlan`.
+- Added `render-build-plan-run-executable` and
+  `e2e/golden/build-plan-run-executable.flake.nix`.
+- Added invalid CLI/e2e cases for missing executable package and missing Lean
+  source input references.
+
+## Verification Result
+- `nix develop --command lake build`
+- `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`

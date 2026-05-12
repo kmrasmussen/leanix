@@ -49,7 +49,14 @@ wrapper with named arguments.
 `leanix render-build-plan-text-file --out generated/flake.nix` demonstrates
 `BuildPlan.installTextFile`. The hashed source fixture now uses
 `BuildPlan.copyInputFile`, so its source input reference is visible at the plan
-layer before lowering to structured backend steps.
+layer before lowering to structured backend steps. `leanix
+render-build-plan-run-executable --out generated/flake.nix` demonstrates
+`BuildPlan.runPackageExecutableToOutput`, which runs a package executable and
+writes stdout to `$out`.
+
+The self-check package now uses `BuildPlan.leanPackageFromInputTree` instead of
+direct `BuildExpr.runSteps`, so the `leanixSrc` input reference is visible at
+the plan layer before lowering.
 
 The closure check now uses a typed `CheckCommand.packageExecutableToOutput`
 instead of raw shell. The source fixture example also uses the structured

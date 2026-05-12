@@ -441,6 +441,46 @@ fn run_build_plan_text_file_case(repo: &Path) -> Result<(), String> {
     }
 }
 
+fn run_build_plan_run_executable_case(repo: &Path) -> Result<(), String> {
+    let output = "generated/flake.nix";
+    let out_link = "generated/hello-version-result";
+    eprintln!("case: build plan run package executable");
+    run(
+        repo,
+        "lake",
+        &[
+            "exe",
+            "leanix",
+            "render-build-plan-run-executable",
+            "--out",
+            output,
+        ],
+    )?;
+    compare_file(
+        repo,
+        output,
+        "e2e/golden/build-plan-run-executable.flake.nix",
+    )?;
+    run(repo, "nix", &["flake", "check", "path:./generated"])?;
+    run(
+        repo,
+        "nix",
+        &[
+            "build",
+            "path:./generated#helloVersion",
+            "--out-link",
+            out_link,
+        ],
+    )?;
+    let version = fs::read_to_string(repo.join(out_link))
+        .map_err(|err| format!("failed reading {out_link}: {err}"))?;
+    if version.contains("hello") {
+        Ok(())
+    } else {
+        Err(format!("hello version output mismatch: {version:?}"))
+    }
+}
+
 fn run_hashed_source_case(repo: &Path) -> Result<(), String> {
     let output = "generated/flake.nix";
     let out_link = "generated/source-fixture-result";
@@ -836,6 +876,7 @@ fn run_registry_case(repo: &Path) -> Result<(), String> {
     let list = run_capture(repo, "lake", &["exe", "leanix", "list-examples"])?;
     for expected in [
         "hello",
+        "build-plan-run-executable",
         "service-schema",
         "showcase",
         "multi-system-schema",
@@ -1145,6 +1186,17 @@ fn main() -> Result<(), String> {
                 "error: duplicate build plan arguments for build plan duplicateBuildPlanArgs",
         },
         InvalidCase {
+            name: "build plan run executable missing package reference",
+            render_arg: "render-invalid-build-plan-run-executable-ref",
+            expected_stderr:
+                "error: build plan runExecutableBroken for x86_64-linux refers to missing package missingExecutablePackage",
+        },
+        InvalidCase {
+            name: "Lean package build plan missing input reference",
+            render_arg: "render-invalid-lean-package-input-ref",
+            expected_stderr: "error: build expression refers to missing input missingLeanSrc",
+        },
+        InvalidCase {
             name: "duplicate package env",
             render_arg: "render-invalid-duplicate-package-env",
             expected_stderr:
@@ -1218,6 +1270,7 @@ fn main() -> Result<(), String> {
     run_source_injection_case(&repo)?;
     run_registry_case(&repo)?;
     run_build_plan_text_file_case(&repo)?;
+    run_build_plan_run_executable_case(&repo)?;
     run_hashed_source_case(&repo)?;
 
     for case in invalid_cases {

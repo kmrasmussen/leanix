@@ -48,8 +48,9 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
   lockfile witness.
 - 🟡 Track builder identity and declared dependencies beyond the package graph:
   `BuildPlan` now names typed builder identities for known nixpkgs packages,
-  executable text wrappers, input-tree/file copies, and text-file installation,
-  and exposes package/input references before lowering.
+  executable text wrappers, input-tree/file copies, text-file installation,
+  package executable runs, and Lean package builds from input trees, and
+  exposes package/input references before lowering.
 - 🟡 Model build plans separately from realized store paths: plans lower to the
   existing Nix-shaped `BuildExpr` backend in the first slice.
 - ✅ Validation returns structured `ValidateError` and `SchemaError` values.

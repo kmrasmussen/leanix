@@ -59,13 +59,15 @@ def helloFlake : Flake where
 def leanixSource (url : String) : Input :=
   .localDevSource url
 
-def leanixPackage : Package .x86_64_linux where
-  name := "leanix"
-  build := .runSteps "leanix-build" [.nixpkgs "lean4"] [
-    .copySource (.inputPath "leanixSrc") "source",
-    .buildLeanProject "source",
-    .run "touch \"$out\""
-  ]
+def leanixPackagePlan : BuildPlan :=
+  .leanPackageFromInputTree {
+    derivationName := "leanix-build"
+    inputName := "leanixSrc"
+    sourceDestination := "source"
+  }
+
+def leanixPackage : Package .x86_64_linux :=
+  Package.fromBuildPlan "leanix" leanixPackagePlan
 
 def leanixDevShell : DevShell .x86_64_linux where
   name := "default"
@@ -441,6 +443,63 @@ def duplicateBuildPlanArgumentsFlake : Except String ValidatedFlake := do
         project
   | .error error => throw error.toString
 
+def missingRunExecutablePlan : BuildPlan :=
+  .runPackageExecutableToOutput {
+    derivationName := "run-executable-broken"
+    packageName := "missingExecutablePackage"
+    executable := "missing-executable"
+  }
+
+def missingRunExecutablePlanFlake : Except String ValidatedFlake := do
+  match validateBuildPlanRefs .x86_64_linux [] ["runExecutableBroken"]
+      "build plan runExecutableBroken" missingRunExecutablePlan with
+  | .ok _ =>
+      let package : Package .x86_64_linux :=
+        Package.fromBuildPlan "runExecutableBroken" missingRunExecutablePlan
+      let project : LibraryProject .x86_64_linux := {
+        package := package
+        devShell := {
+          name := "default"
+          packageNames := ["runExecutableBroken"]
+        }
+        check := {
+          name := "default"
+          packageName := "runExecutableBroken"
+          command := "touch \"$out\""
+        }
+      }
+      Flake.fromSchema "Leanix invalid run executable build plan example"
+        [("nixpkgs", nixpkgsInput)] project
+  | .error error => throw error.toString
+
+def missingLeanPackageInputPlan : BuildPlan :=
+  .leanPackageFromInputTree {
+    derivationName := "missing-lean-package-input"
+    inputName := "missingLeanSrc"
+  }
+
+def missingLeanPackageInputPlanFlake : Except String ValidatedFlake := do
+  match validateBuildPlanRefs .x86_64_linux [] ["missingLeanPackage"]
+      "build plan missingLeanPackage" missingLeanPackageInputPlan with
+  | .ok _ =>
+      let package : Package .x86_64_linux :=
+        Package.fromBuildPlan "missingLeanPackage" missingLeanPackageInputPlan
+      let project : LibraryProject .x86_64_linux := {
+        package := package
+        devShell := {
+          name := "default"
+          packageNames := ["missingLeanPackage"]
+        }
+        check := {
+          name := "default"
+          packageName := "missingLeanPackage"
+          command := "touch \"$out\""
+        }
+      }
+      Flake.fromSchema "Leanix invalid Lean package build plan example"
+        [("nixpkgs", nixpkgsInput)] project
+  | .error error => throw error.toString
+
 def missingInputBuildPlan : BuildPlan :=
   .copyInputFile {
     derivationName := "missing-input-copy"
@@ -494,6 +553,30 @@ def plannedTextFileFlake : Flake where
   description := "Leanix build plan text file example"
   inputs := [("nixpkgs", nixpkgsInput)]
   outputs := plannedTextFileOutputs
+
+def runExecutablePlan : BuildPlan :=
+  .runPackageExecutableToOutput {
+    derivationName := "hello-version"
+    packageName := "helloTool"
+    executable := "hello"
+    arguments := ["--version"]
+  }
+
+def runExecutablePackage : Package .x86_64_linux :=
+  Package.fromBuildPlan "helloVersion" runExecutablePlan
+
+def runExecutableOutputs : Outputs where
+  packages
+    | .x86_64_linux => [runExecutablePackage, helloToolPackage]
+    | _ => []
+  apps := fun _ => []
+  devShells := fun _ => []
+  checks := fun _ => []
+
+def runExecutableFlake : Flake where
+  description := "Leanix build plan run executable example"
+  inputs := [("nixpkgs", nixpkgsInput)]
+  outputs := runExecutableOutputs
 
 def cyclePackageA : Package .x86_64_linux where
   name := "cycleA"

@@ -38,14 +38,13 @@ Goal: make build plans the normal package authoring surface.
 Already landed:
 
 - typed build-plan constructors for known nixpkgs packages, executable text
-  wrappers, input tree/file copies, and text-file installation
+  wrappers, input tree/file copies, text-file installation, running package
+  executables, and building Lean packages from input trees
 - validation for duplicate args and missing source/input/package references
 - multiple examples using `Package.fromBuildPlan`
 
 Next deliverables:
 
-- typed constructors for running package executables and building Lean packages
-  from input trees
 - conservative path/destination validation
 - clearer package dependency extraction from build plans before lowering
 - more examples migrated away from direct `BuildExpr.runSteps`

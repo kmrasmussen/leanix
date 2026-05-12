@@ -16,7 +16,7 @@ The post-`TICKET-0025` roadmap wave was materialized as `TICKET-0026` through
 `TICKET-0033` and is now complete.
 
 The active next roadmap wave is materialized as `TICKET-0034` through
-`TICKET-0044`. `TICKET-0034` and `TICKET-0035` are complete; `TICKET-0036`
+`TICKET-0044`. `TICKET-0034` through `TICKET-0036` are complete; `TICKET-0037`
 through `TICKET-0044` remain ready to pick up as implementation slices.
 
 Use `roadmap/00-current-state.md`, `roadmap/02-milestones.md`,
