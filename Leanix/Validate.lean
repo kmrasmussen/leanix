@@ -446,6 +446,124 @@ def CheckedPackageGraph.acyclicByFuel (graph : CheckedPackageGraph system) :
     PackageClosure.acyclicByFuelBool graph.packages = true :=
   graph.valid.noFuelBoundedCycles.toCheckedBool
 
+namespace SystemOutputs
+
+def packageNames (packages : List (Package system)) : List String :=
+  packages.map (fun package => package.name)
+
+def packageRefResolvesBool (packages : List (Package system)) (packageName : String) : Bool :=
+  (packageNames packages).contains packageName
+
+def packageRefsResolveBool (packages : List (Package system)) (refs : List String) : Bool :=
+  refs.all (packageRefResolvesBool packages)
+
+def inputRefResolvesBool (inputNames : List String) (inputName : String) : Bool :=
+  inputNames.contains inputName
+
+def inputRefsResolveBool (inputNames refs : List String) : Bool :=
+  refs.all (inputRefResolvesBool inputNames)
+
+def appRefsResolveBool (packages : List (Package system)) (apps : List (App system)) : Bool :=
+  apps.all fun app => packageRefResolvesBool packages app.packageName
+
+def devShellRefsResolveBool (packages : List (Package system))
+    (devShells : List (DevShell system)) : Bool :=
+  devShells.all fun shell => packageRefsResolveBool packages shell.packageNames
+
+def checkRefsResolveBool (inputNames : List String) (packages : List (Package system))
+    (checks : List (Check system)) : Bool :=
+  checks.all fun check =>
+    packageRefResolvesBool packages check.packageName &&
+    packageRefsResolveBool packages (checkCommandPackageRefs check.command) &&
+    inputRefsResolveBool inputNames (checkCommandInputRefs check.command)
+
+def formatterRefResolvesBool (packages : List (Package system))
+    (formatter? : Option (Formatter system)) : Bool :=
+  match formatter? with
+  | none => true
+  | some formatter => packageRefResolvesBool packages formatter.packageName
+
+inductive AppReferencesResolve (packages : List (Package system)) (apps : List (App system)) :
+    Prop where
+  | checked : appRefsResolveBool packages apps = true -> AppReferencesResolve packages apps
+
+inductive DevShellReferencesResolve (packages : List (Package system))
+    (devShells : List (DevShell system)) : Prop where
+  | checked :
+      devShellRefsResolveBool packages devShells = true ->
+      DevShellReferencesResolve packages devShells
+
+inductive CheckReferencesResolve (inputNames : List String) (packages : List (Package system))
+    (checks : List (Check system)) : Prop where
+  | checked :
+      checkRefsResolveBool inputNames packages checks = true ->
+      CheckReferencesResolve inputNames packages checks
+
+inductive FormatterReferenceResolve (packages : List (Package system))
+    (formatter? : Option (Formatter system)) : Prop where
+  | checked :
+      formatterRefResolvesBool packages formatter? = true ->
+      FormatterReferenceResolve packages formatter?
+
+def AppReferencesResolve.toCheckedBool :
+    AppReferencesResolve (system := system) packages apps ->
+      appRefsResolveBool packages apps = true
+  | .checked proof => proof
+
+def DevShellReferencesResolve.toCheckedBool :
+    DevShellReferencesResolve (system := system) packages devShells ->
+      devShellRefsResolveBool packages devShells = true
+  | .checked proof => proof
+
+def CheckReferencesResolve.toCheckedBool :
+    CheckReferencesResolve (system := system) inputNames packages checks ->
+      checkRefsResolveBool inputNames packages checks = true
+  | .checked proof => proof
+
+def FormatterReferenceResolve.toCheckedBool :
+    FormatterReferenceResolve (system := system) packages formatter? ->
+      formatterRefResolvesBool packages formatter? = true
+  | .checked proof => proof
+
+structure Valid (inputNames : List String) (packages : List (Package system))
+    (apps : List (App system)) (devShells : List (DevShell system))
+    (checks : List (Check system)) (formatter? : Option (Formatter system)) : Prop where
+  appReferencesResolve : AppReferencesResolve packages apps
+  devShellReferencesResolve : DevShellReferencesResolve packages devShells
+  checkReferencesResolve : CheckReferencesResolve inputNames packages checks
+  formatterReferenceResolve : FormatterReferenceResolve packages formatter?
+
+end SystemOutputs
+
+structure CheckedSystemOutputs (system : System) where
+  inputNames : List String
+  packages : List (Package system)
+  apps : List (App system)
+  devShells : List (DevShell system)
+  checks : List (Check system)
+  formatter? : Option (Formatter system)
+  packageGraph : CheckedPackageGraph system
+  valid : SystemOutputs.Valid inputNames packages apps devShells checks formatter?
+
+def CheckedSystemOutputs.appRefsResolve (outputs : CheckedSystemOutputs system) :
+    SystemOutputs.appRefsResolveBool outputs.packages outputs.apps = true :=
+  outputs.valid.appReferencesResolve.toCheckedBool
+
+def CheckedSystemOutputs.devShellRefsResolve (outputs : CheckedSystemOutputs system) :
+    SystemOutputs.devShellRefsResolveBool outputs.packages outputs.devShells = true :=
+  outputs.valid.devShellReferencesResolve.toCheckedBool
+
+def CheckedSystemOutputs.checkRefsResolve (outputs : CheckedSystemOutputs system) :
+    SystemOutputs.checkRefsResolveBool outputs.inputNames outputs.packages outputs.checks = true :=
+  outputs.valid.checkReferencesResolve.toCheckedBool
+
+def CheckedSystemOutputs.formatterRefResolves (outputs : CheckedSystemOutputs system) :
+    SystemOutputs.formatterRefResolvesBool outputs.packages outputs.formatter? = true :=
+  outputs.valid.formatterReferenceResolve.toCheckedBool
+
+inductive AnyCheckedSystemOutputs where
+  | mk : CheckedSystemOutputs system -> AnyCheckedSystemOutputs
+
 def checkPackageGraph (system : System) (packages : List (Package system)) :
     Except ValidateError (CheckedPackageGraph system) := do
   let packageNames := PackageClosure.packageNames packages
@@ -469,8 +587,8 @@ def checkPackageGraph (system : System) (packages : List (Package system)) :
   else
     throw (.missingPackageRef system "package graph" "unknown")
 
-def validateSystemOutputsWithPolicy (policy : EscapePolicy) (flake : Flake) (system : System) :
-    Except ValidateError Unit := do
+def checkSystemOutputsWithPolicy (policy : EscapePolicy) (flake : Flake) (system : System) :
+    Except ValidateError (CheckedSystemOutputs system) := do
   let packages := flake.outputs.packages system
   let apps := flake.outputs.apps system
   let devShells := flake.outputs.devShells system
@@ -488,7 +606,7 @@ def validateSystemOutputsWithPolicy (policy : EscapePolicy) (flake : Flake) (sys
     validateBuildExprInputRefs inputNames package.build
     validateBuildExprPolicy policy s!"package {package.name}" package.build
 
-  let _checkedPackages ← checkPackageGraph system packages
+  let checkedPackages ← checkPackageGraph system packages
 
   for package in packages do
     validatePackageEnvVars system package
@@ -512,6 +630,39 @@ def validateSystemOutputsWithPolicy (policy : EscapePolicy) (flake : Flake) (sys
   | some formatter =>
       validatePackageRef system packageNames "formatter" formatter.packageName
 
+  if hApps : SystemOutputs.appRefsResolveBool packages apps = true then
+    if hShells : SystemOutputs.devShellRefsResolveBool packages devShells = true then
+      if hChecks : SystemOutputs.checkRefsResolveBool inputNames packages checks = true then
+        if hFormatter : SystemOutputs.formatterRefResolvesBool packages formatter? = true then
+          pure {
+            inputNames := inputNames
+            packages := packages
+            apps := apps
+            devShells := devShells
+            checks := checks
+            formatter? := formatter?
+            packageGraph := checkedPackages
+            valid := {
+              appReferencesResolve := .checked hApps
+              devShellReferencesResolve := .checked hShells
+              checkReferencesResolve := .checked hChecks
+              formatterReferenceResolve := .checked hFormatter
+            }
+          }
+        else
+          throw (.missingPackageRef system "checked formatter" "unknown")
+      else
+        throw (.missingPackageRef system "checked checks" "unknown")
+    else
+      throw (.missingPackageRef system "checked devShells" "unknown")
+  else
+    throw (.missingPackageRef system "checked apps" "unknown")
+
+def validateSystemOutputsWithPolicy (policy : EscapePolicy) (flake : Flake) (system : System) :
+    Except ValidateError Unit := do
+  let _checked ← checkSystemOutputsWithPolicy policy flake system
+  pure ()
+
 def validateSystemOutputs (flake : Flake) (system : System) : Except ValidateError Unit :=
   validateSystemOutputsWithPolicy .development flake system
 
@@ -525,7 +676,8 @@ def validateInput (name : String) (input : Input) : Except ValidateError Unit :=
       | some _ => pure ()
       | none => throw (.sourceInputMissingHash name)
 
-def validateFlakeWithPolicy (policy : EscapePolicy) (flake : Flake) : Except ValidateError Unit := do
+def checkFlakeWithPolicy (policy : EscapePolicy) (flake : Flake) :
+    Except ValidateError (List AnyCheckedSystemOutputs) := do
   if hasDuplicateString (flake.inputs.map (fun input => input.fst)) then
     throw .duplicateInputNames
   else
@@ -534,8 +686,15 @@ def validateFlakeWithPolicy (policy : EscapePolicy) (flake : Flake) : Except Val
   for input in flake.inputs do
     validateInput input.fst input.snd
 
+  let mut checkedOutputs : List AnyCheckedSystemOutputs := []
   for system in System.all do
-    validateSystemOutputsWithPolicy policy flake system
+    let checked ← checkSystemOutputsWithPolicy policy flake system
+    checkedOutputs := checkedOutputs ++ [AnyCheckedSystemOutputs.mk checked]
+  pure checkedOutputs
+
+def validateFlakeWithPolicy (policy : EscapePolicy) (flake : Flake) : Except ValidateError Unit := do
+  let _checked ← checkFlakeWithPolicy policy flake
+  pure ()
 
 def validateFlake (flake : Flake) : Except ValidateError Unit :=
   validateFlakeWithPolicy .development flake
@@ -543,14 +702,19 @@ def validateFlake (flake : Flake) : Except ValidateError Unit :=
 structure ValidatedFlake where
   flake : Flake
   valid : validateFlake flake = .ok ()
+  checkedOutputs : List AnyCheckedSystemOutputs := []
   carriedInvariants : List String := ["validateFlake"]
 
 def Flake.validateChecked (flake : Flake) : Except ValidateError ValidatedFlake :=
   match h : validateFlake flake with
-  | .ok _ => .ok {
-      flake := flake
-      valid := h
-    }
+  | .ok _ =>
+      match checkFlakeWithPolicy .development flake with
+      | .ok checkedOutputs => .ok {
+          flake := flake
+          valid := h
+          checkedOutputs := checkedOutputs
+        }
+      | .error error => .error error
   | .error error => .error error
 
 end Leanix

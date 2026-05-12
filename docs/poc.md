@@ -86,8 +86,17 @@ Graph validation reports `ValidateError` values, and schema validation reports
 while the Rust e2e harness asserts exact error output for representative graph
 and schema failures.
 
-Package closure also has a checked boundary. `CheckedPackageGraph system`
-carries a package list plus named `PackageClosure.Valid` evidence:
+Validation now also produces a per-system checked output boundary.
+`CheckedSystemOutputs system` carries the packages, apps, dev shells, checks,
+formatter, input names, and the checked package graph for one system. Its named
+evidence records that app, dev-shell, check, and formatter references resolve
+against the same package graph. `ValidatedFlake` stores those checked outputs
+for downstream schema, renderer, and artifact work; the renderer behavior is
+unchanged in this slice.
+
+Package closure has its own checked boundary inside that value.
+`CheckedPackageGraph system` carries a package list plus named
+`PackageClosure.Valid` evidence:
 
 - `PackageClosure.EdgeTargetsNamed`: every package dependency edge points at a
   package name in the same graph

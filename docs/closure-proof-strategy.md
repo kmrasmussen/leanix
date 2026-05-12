@@ -29,6 +29,18 @@ Those properties are still produced by the current boolean checker.
 fact. Existing code can still recover the older checked facts through
 `CheckedPackageGraph.refsResolve` and `CheckedPackageGraph.acyclicByFuel`.
 
+`CheckedSystemOutputs system` now embeds `CheckedPackageGraph` and adds the
+output-family evidence around it:
+
+- `SystemOutputs.AppReferencesResolve`
+- `SystemOutputs.DevShellReferencesResolve`
+- `SystemOutputs.CheckReferencesResolve`
+- `SystemOutputs.FormatterReferenceResolve`
+
+That boundary is intentionally per-system. It gives artifacts and future
+renderer refactors a precise checked value to point at without changing the
+current generated Nix shape.
+
 What is now proven is still modest: checked graph evidence has named closure
 properties over package-name edges, and valid examples carry those properties
 without hand-written proof terms beyond `native_decide`.

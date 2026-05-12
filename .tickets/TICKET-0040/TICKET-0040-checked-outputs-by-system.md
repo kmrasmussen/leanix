@@ -49,4 +49,25 @@ app, shell, check, and formatter reference evidence.
 - `blog/yyyy-mm-dd-hh-mm-checked-outputs-by-system.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+1. Add a per-system checked output value that wraps package graph evidence and
+   output-family reference evidence.
+2. Populate those values from the existing validation path without changing
+   renderer behavior.
+3. Expose the checked-output boundary in artifact invariant names.
+4. Document how `CheckedSystemOutputs` relates to `ValidatedFlake` and
+   `CheckedPackageGraph`.
+
+## Result
+- Added `SystemOutputs.*` named evidence for app, dev-shell, check, and
+  formatter reference resolution.
+- Added `CheckedSystemOutputs system` and `AnyCheckedSystemOutputs`.
+- `ValidatedFlake` now carries checked outputs produced by validation.
+- Artifact manifests now include `CheckedSystemOutputs.*` invariant names.
+- Updated PoC, roadmap, and closure proof strategy docs.
+
+## Verification Result
+- Passed: `nix develop --command lake build`.
+- Passed: `nix develop --command cargo run --locked --manifest-path e2e/runner/Cargo.toml`.

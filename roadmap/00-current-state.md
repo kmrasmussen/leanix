@@ -139,6 +139,7 @@ It currently covers:
 - tampered and missing generated-file artifact rejection
 - floating input and lockfile-witness artifact policy cases
 - strict artifact raw-check rejection
+- checked per-system output evidence carried on `ValidatedFlake`
 - invalid examples with exact stderr checks
 - CLI example registry listing and generic rendering
 - optional nixparserlean interop through `--nixparserlean-dir`
