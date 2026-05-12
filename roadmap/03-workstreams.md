@@ -19,11 +19,11 @@ Current assets:
 - `ValidatedSchema`
 - `BuildPlan`
 - `CheckCommand`
+- `docs/schema-catalog.md`
 
 Next work:
 
 - package-set or data-only schema
-- schema catalog reference
 - schema composition helpers only where repeated patterns justify them
 - richer build-plan constructors
 - fewer example packages authored directly as `BuildExpr`

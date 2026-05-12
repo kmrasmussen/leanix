@@ -10,6 +10,9 @@ Use `leanix list-examples` to print the registry of renderable examples. Use
 using the older `render-*` commands when you want the stable compatibility
 spelling used by existing e2e fixtures.
 
+For schema selection, guarantees, and raw-`Flake` boundaries, see
+[`docs/schema-catalog.md`](../docs/schema-catalog.md).
+
 ## Current Showcase
 
 - [proof-carrying-cli-closure](proof-carrying-cli-closure/) demonstrates the

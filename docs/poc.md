@@ -45,6 +45,9 @@ that convention in validation errors. Use raw `Flake` and `Outputs` values when
 the shape is still experimental, needs process supervision or network/runtime
 policy, or is deliberately outside the schema vocabulary.
 
+The maintained reference for schema choice and schema guarantees is
+[`docs/schema-catalog.md`](schema-catalog.md).
+
 There is also a `selfFlakeWithSource` example: the CLI renders a flake that
 imports the Leanix repository as a `localDevSource` input, copies it with a
 structured build step, and runs a structured Lean-project build inside

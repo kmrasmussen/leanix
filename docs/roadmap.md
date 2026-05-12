@@ -33,8 +33,8 @@ Status legend: ✅ done, 🟡 partial, ⬜ not started.
 - ✅ `FormatterProject` models formatter outputs as typed package references.
 - ✅ `ServiceProject` models daemon-style package/app/dev-shell/check
   conventions.
+- ✅ Maintained schema catalog reference in `docs/schema-catalog.md`.
 - ⬜ Package-set and documentation-oriented schemas.
-- ⬜ Maintained schema catalog reference.
 
 ## Phase 2: Reproducibility Model — 🟡
 

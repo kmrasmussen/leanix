@@ -86,8 +86,6 @@ Missing or still shallow:
 
 - documentation or website schemas
 - data-only/package-set schemas
-- schema catalog reference docs with a stable "which schema should I use"
-  decision table
 - schema composition helpers for repeated package/app/check/dev-shell patterns
 - schemas with policy knobs, such as "default app required" versus "all apps
   named"
@@ -172,7 +170,7 @@ Leanix is now past the first proof of concept. The next version should make the
 system easier to extend and trust:
 
 - package-set schemas for common non-CLI shapes
-- a maintained schema catalog reference
+- keep the schema catalog reference maintained as schemas change
 - build plans as the main package-authoring API for normal examples
 - a Rust-owned generic artifact verifier
 - stronger proof-carrying graph values and checked-output boundaries

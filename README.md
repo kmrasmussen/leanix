@@ -44,6 +44,11 @@ when one daemon-style package owns the default app plus one or more health
 checks. Drop to raw `Flake` and `Outputs` values when the project shape does
 not fit one of these conventions yet.
 
+The maintained schema reference lives in
+[`docs/schema-catalog.md`](docs/schema-catalog.md). It maps every implemented
+schema to its example, CLI registry name, validation contract, and raw-`Flake`
+boundary.
+
 Schema validation now has an explicit type boundary. Raw schemas become
 `ValidatedSchema` values before they can be lowered through the validated-schema
 API.

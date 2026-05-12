@@ -51,4 +51,27 @@ examples, escape hatches, and selection guidance.
 - `blog/yyyy-mm-dd-hh-mm-schema-catalog-reference.md`
 
 ## Progress
-- Not started.
+- Completed in this ticket.
+
+## Plan
+- Review the implemented schema set against `Leanix/Schema.lean`,
+  `Leanix/Examples.lean`, and `Main.lean`.
+- Add `docs/schema-catalog.md` with schema selection guidance, guarantees,
+  examples, CLI names, invalid fixtures, and raw-`Flake` boundaries.
+- Link the catalog from README, PoC docs, and examples docs.
+- Add a dated blog note and update roadmap/ticket state.
+
+## Result
+- Added `docs/schema-catalog.md`.
+- Covered `CliProject`, `MultiSystemCliProject`, `LibraryProject`,
+  `MultiAppProject`, `FormatterProject`, and `ServiceProject`.
+- Mapped schemas to CLI registry names, source examples, and invalid e2e
+  fixture commands.
+- Documented shared validation conventions and raw `Flake` as an intentional
+  escape hatch.
+- Linked the catalog from `README.md`, `docs/poc.md`, and
+  `examples/README.md`.
+
+## Verification Result
+- Documentation reviewed against `Leanix/Schema.lean`, `Leanix/Examples.lean`,
+  and `Main.lean`.
